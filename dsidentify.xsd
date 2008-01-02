@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<xs:schema id="DSIdentify" targetNamespace="http://tempuri.org/DSIdentify.xsd" elementFormDefault="unqualified"
+	attributeFormDefault="unqualified" xmlns="http://tempuri.org/DSIdentify.xsd" xmlns:mstns="http://tempuri.org/DSIdentify.xsd"
+	xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata"
+	xmlns:msprop="urn:schemas-microsoft-com:xml-msprop">
+	<xs:element name="DSIdentify" msdata:IsDataSet="true">
+		<xs:complexType>
+			<xs:choice maxOccurs="unbounded">
+				<xs:element name="BiometriaDP">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="Codigo" type="xs:string" />
+							<xs:element name="Dedo" type="xs:int" />
+							<xs:element name="Sensor" type="xs:string" />
+							<xs:element name="DataBin" type="xs:string" minOccurs="0" msprop:nullValue="_empty" />
+							<xs:element name="TemplateDP" type="xs:base64Binary" minOccurs="0" />
+							<xs:element name="TemplateFT" type="xs:string" minOccurs="0" />
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="DataBin">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="HistoricoDispensas">
+								<xs:complexType>
+									<xs:sequence />
+									<xs:attribute name="Data" type="xs:string" />
+									<xs:attribute name="DescricaoDispensa" type="xs:string" />
+									<xs:attribute name="LoginResponsavel" type="xs:string" />
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+						<xs:attribute name="Nome" type="xs:string" />
+						<xs:attribute name="Sexo" type="xs:string" />
+						<xs:attribute name="DataNasc" type="xs:string" />
+						<xs:attribute name="DispensaBiometria" type="xs:string" />
+						<xs:attribute name="DataFinalDispensa" type="xs:string" />
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="BiometriaDPLogs">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="sequencial" msdata:ReadOnly="true" msdata:AutoIncrement="true" type="xs:int" />
+							<xs:element name="Codigo" type="xs:string" />
+							<xs:element name="DataHora" type="xs:dateTime" />
+							<xs:element name="Descricao" type="xs:string" />
+							<xs:element name="VerificacaoOK" type="xs:boolean" />
+							<xs:element name="CodDedo" type="xs:int" />
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+			</xs:choice>
+		</xs:complexType>
+		<xs:unique name="DSIdentifyKey1" msdata:PrimaryKey="true">
+			<xs:selector xpath=".//mstns:BiometriaDPLogs" />
+			<xs:field xpath="mstns:sequencial" />
+		</xs:unique>
+	</xs:element>
+</xs:schema>
