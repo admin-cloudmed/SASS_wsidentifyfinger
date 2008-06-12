@@ -6,18 +6,6 @@
 	<xs:element name="DSIdentify" msdata:IsDataSet="true">
 		<xs:complexType>
 			<xs:choice maxOccurs="unbounded">
-				<xs:element name="BiometriaDP">
-					<xs:complexType>
-						<xs:sequence>
-							<xs:element name="Codigo" type="xs:string" />
-							<xs:element name="Dedo" type="xs:int" />
-							<xs:element name="Sensor" type="xs:string" />
-							<xs:element name="DataBin" type="xs:string" minOccurs="0" msprop:nullValue="_empty" />
-							<xs:element name="TemplateDP" type="xs:base64Binary" minOccurs="0" />
-							<xs:element name="TemplateFT" type="xs:string" minOccurs="0" />
-						</xs:sequence>
-					</xs:complexType>
-				</xs:element>
 				<xs:element name="DataBin">
 					<xs:complexType>
 						<xs:sequence>
@@ -49,11 +37,36 @@
 						</xs:sequence>
 					</xs:complexType>
 				</xs:element>
+				<xs:element name="BiometriaDP">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="Codigo" type="xs:string" />
+							<xs:element name="Dedo" type="xs:int" />
+							<xs:element name="DataBin" type="xs:string" minOccurs="0" />
+							<xs:element name="Template1" type="xs:base64Binary" minOccurs="0" />
+							<xs:element name="Size1" type="xs:int" minOccurs="0" />
+							<xs:element name="Template2" type="xs:base64Binary" minOccurs="0" />
+							<xs:element name="Size2" type="xs:int" minOccurs="0" />
+							<xs:element name="Template3" type="xs:base64Binary" minOccurs="0" />
+							<xs:element name="Size3" type="xs:int" minOccurs="0" />
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
 			</xs:choice>
 		</xs:complexType>
 		<xs:unique name="DSIdentifyKey1" msdata:PrimaryKey="true">
 			<xs:selector xpath=".//mstns:BiometriaDPLogs" />
 			<xs:field xpath="mstns:sequencial" />
+		</xs:unique>
+		<xs:unique name="DSIdentifyKey2" msdata:PrimaryKey="true">
+			<xs:selector xpath=".//mstns:BiometriaDP" />
+			<xs:field xpath="mstns:Codigo" />
+			<xs:field xpath="mstns:Dedo" />
+		</xs:unique>
+		<xs:unique name="DSIdentifyKey3" msdata:PrimaryKey="true">
+			<xs:selector xpath=".//mstns:BiometriaDP" />
+			<xs:field xpath="mstns:Codigo" />
+			<xs:field xpath="mstns:Dedo" />
 		</xs:unique>
 	</xs:element>
 </xs:schema>

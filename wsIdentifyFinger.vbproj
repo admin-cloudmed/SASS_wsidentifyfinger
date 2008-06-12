@@ -86,33 +86,27 @@
                     WrapperTool = "primary"
                 />
                 <Reference
-                    Name = "DpSdkEngLib"
-                    Guid = "{8542CE30-10CE-11D4-87D7-0050DA196853}"
-                    VersionMajor = "1"
-                    VersionMinor = "1"
-                    Lcid = "0"
-                    WrapperTool = "tlbimp"
-                />
-                <Reference
-                    Name = "DPSDKOPSLib"
-                    Guid = "{FBAB9B45-787C-464F-9B72-ECB894B8A4F2}"
-                    VersionMajor = "1"
-                    VersionMinor = "1"
-                    Lcid = "0"
-                    WrapperTool = "tlbimp"
-                />
-                <Reference
-                    Name = "DpSdkUsrLib"
-                    Guid = "{F8109970-1A40-11D4-87DF-0050DA196853}"
-                    VersionMajor = "1"
-                    VersionMinor = "1"
-                    Lcid = "0"
-                    WrapperTool = "tlbimp"
-                />
-                <Reference
                     Name = "Registro"
                     AssemblyName = "Registro"
                     HintPath = "..\Registro\obj\Debug\Registro.dll"
+                />
+                <Reference
+                    Name = "GrFingerXLib"
+                    Guid = "{A9995C7C-77BF-4E27-B581-A4B5BBD90E50}"
+                    VersionMajor = "1"
+                    VersionMinor = "0"
+                    Lcid = "0"
+                    WrapperTool = "tlbimp"
+                />
+                <Reference
+                    Name = "AxInterop.GrFingerXLib"
+                    AssemblyName = "AxInterop.GrFingerXLib"
+                    HintPath = "C:\Program Files\Griaule\Fingerprint SDK 2007\samples\testeVisual Basic.NET 2003\GrFingerX\obj\AxInterop.GrFingerXLib.dll"
+                />
+                <Reference
+                    Name = "System.Windows.Forms"
+                    AssemblyName = "System.Windows.Forms"
+                    HintPath = "C:\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.Windows.Forms.dll"
                 />
             </References>
             <Imports>
@@ -129,6 +123,11 @@
             <Include>
                 <File
                     RelPath = "AssemblyInfo.vb"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "DBClass.vb"
                     SubType = "Code"
                     BuildAction = "Compile"
                 />
