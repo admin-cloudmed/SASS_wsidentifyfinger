@@ -390,10 +390,10 @@ Public Class Service1
         'Grava no Log
         insertlog(cartaoFormatado, DateTime.Now, "Erro ao Verificar Biometria", False, codDedo)
         Return "/erro Falha de Verificacao de Biometria"
-
     End Function
 
-    Public Function insertlog(ByVal codUsuario As String, ByVal dthr As Date, ByVal desc As String, ByVal verificOK As Boolean, ByVal dedo As Integer)
+    <WebMethod()> _
+ Public Function insertlog(ByVal codUsuario As String, ByVal dthr As Date, ByVal desc As String, ByVal verificOK As Boolean, ByVal dedo As Integer)
 
         Try 'se caso os parametros forem inválidos, nulos
             SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
