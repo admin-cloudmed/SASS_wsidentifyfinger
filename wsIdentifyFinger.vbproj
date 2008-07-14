@@ -86,11 +86,6 @@
                     WrapperTool = "primary"
                 />
                 <Reference
-                    Name = "Registro"
-                    AssemblyName = "Registro"
-                    HintPath = "..\Registro\obj\Debug\Registro.dll"
-                />
-                <Reference
                     Name = "GrFingerXLib"
                     Guid = "{A9995C7C-77BF-4E27-B581-A4B5BBD90E50}"
                     VersionMajor = "1"
@@ -107,6 +102,11 @@
                     Name = "System.Windows.Forms"
                     AssemblyName = "System.Windows.Forms"
                     HintPath = "C:\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.Windows.Forms.dll"
+                />
+                <Reference
+                    Name = "Registro"
+                    AssemblyName = "Registro"
+                    HintPath = "..\Registro\bin\Registro.dll"
                 />
             </References>
             <Imports>

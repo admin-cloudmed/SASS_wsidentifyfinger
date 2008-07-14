@@ -1,5 +1,6 @@
 Imports System.Web.Services
-imports Registro 
+Imports Registro
+Imports System.Data.SqlClient
 
 <System.Web.Services.WebService(Namespace := "http://tempuri.org/wsIdentifyFinger/Service1")> _
 Public Class Service1
@@ -236,6 +237,40 @@ Public Class Service1
 
             'Verificando se já existe
             If ds.BiometriaDP.Rows.Count > 0 Then
+                If ds.BiometriaDP(0).IsTemplate1Null = True Then
+                    'Atualizar dados, pq já existe o código gravado no banco
+                    Try
+                        Dim ComandoSQL As String
+                        ComandoSQL = "UPDATE BiometriaDP set Template1 = @Template1, Template2 = @Template2, Template3 = @Template3, DataBin = @DataBin WHERE (Codigo = @Codigo)"
+                        Dim myConnection As SqlConnection = New SqlConnection(Misc.GetDadoWebConfig("conexaoBiometria"))
+                        Dim myCommand As SqlCommand = New SqlCommand(ComandoSQL, myConnection)
+
+                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template1", System.Data.SqlDbType.Image, 16, "Template1"))
+                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template2", System.Data.SqlDbType.Image, 16, "Template2"))
+                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template3", System.Data.SqlDbType.Image, 16, "Template3"))
+                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@DataBin", System.Data.SqlDbType.NText, 1073741823, "DataBin"))
+                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Codigo", System.Data.SqlDbType.VarChar, 50, "Codigo"))
+
+                        myCommand.Parameters("@Template1").Value = templateBin1.tpt
+                        myCommand.Parameters("@Template2").Value = templateBin2.tpt
+                        myCommand.Parameters("@Template3").Value = templateBin3.tpt
+                        myCommand.Parameters("@DataBin").Value = dsDados.GetXml
+                        myCommand.Parameters("@Codigo").Value = cartaoFormatado
+
+                        myCommand.Connection.Open()
+                        myCommand.ExecuteNonQuery()
+                        myCommand.Connection.Close()
+                        Return True
+                        'Adiciona ao Logs
+                        insertlog(cartaoFormatado, DateTime.Now, "Biometria Cadastrada com Sucesso", True, codDedo)
+                        Return "/ok"
+                    Catch ex As Exception
+                        Return False
+                        'Adiciona ao Logs
+                        insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Biometria", False, codDedo)
+                        Return "/ok"
+                    End Try
+                End If
                 If ds.BiometriaDP(0).IsTemplate1Null = True Or ds.BiometriaDP(0).Template1 Is Nothing = True Or ds.BiometriaDP(0).Template1.Length <> 0 Then
                     '!!!###GRAVANDO LOG###!!!
                     insertlog(cartaoFormatado, DateTime.Now, "Biometria ja cadastrada", False, codDedo)
@@ -267,7 +302,6 @@ Public Class Service1
             '!!!###GRAVANDO LOG###!!!
             insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Biometria", False, codDedo)
             Return "/erro " & ex.Message
-
         End Try
     End Function
 
@@ -324,46 +358,54 @@ Public Class Service1
                 templateGravado2 = ds.BiometriaDP(0).Template2
                 templateGravado3 = ds.BiometriaDP(0).Template3
 
-                Dim resultado, score As Integer
+                Dim resultado, score1, score2, score3 As Integer
+                'Dim resultado, score As Integer
 
                 Dim GrFinger As GrFingerXLib.GrFingerXCtrl
                 GrFinger = New GrFingerXLib.GrFingerXCtrl
                 GrFinger.Initialize()
 
                 resultado = GrFinger.Verify _
-                   (templateBin_recebido.tpt, templateGravado1, score, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
+                                   (templateBin_recebido.tpt, templateGravado1, score1, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
+                '(templateBin_recebido.tpt, templateGravado1, score, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
 
                 'Verificação com sucesso! Grava no log e retorna /ok
                 If (resultado = GrFingerXLib.GRConstants.GR_MATCH) Then
-                    insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso", True, codDedo)
+                    insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso(1o. template), score: " & score1.ToString, True, codDedo)
+                    'insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso!", True, codDedo)
                     Return "/ok "
                 End If
 
                 'Impressão digital não reconhecida, verificar novamente com 2o. template
                 If (resultado = GrFingerXLib.GRConstants.GR_NOT_MATCH) Then
                     'não passou na primeira, tentando 2a.
-                    resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado2, score, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
+                    resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado2, score2, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
+                    'resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado2, score, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
 
                     'Verificação com sucesso! Grava no log e retorna /ok
                     If (resultado = GrFingerXLib.GRConstants.GR_MATCH) Then
-                        insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso", True, codDedo)
+                        insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso(2o. template), score: " & score2.ToString, True, codDedo)
+                        'insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso!", True, codDedo)
                         Return "/ok "
                     End If
 
                     'Impressão digital não reconhecida, verificar novamente com 3o. template
                     If (resultado = GrFingerXLib.GRConstants.GR_NOT_MATCH) Then
                         'não passou na segunda, tentando 3a. e última
-                        resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado3, score, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
+                        resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado3, score3, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
+                        'resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado3, score, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
 
                         'Verificação com sucesso! Grava no log e retorna /ok
                         If (resultado = GrFingerXLib.GRConstants.GR_MATCH) Then
-                            insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso", True, codDedo)
+                            insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso (3o. template), score: " & score3.ToString, True, codDedo)
+                            'insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso!", True, codDedo)
                             Return "/ok "
                         End If
 
                         'Impressão digital não reconhecida na 3a. tentativa, grava no log e retorna /erro
                         If (resultado = GrFingerXLib.GRConstants.GR_NOT_MATCH) Then
-                            insertlog(cartaoFormatado, DateTime.Now, "Biometria Incompativel", False, codDedo)
+                            insertlog(cartaoFormatado, DateTime.Now, "Biometria Incompativel.(score1=" & score1.ToString & "),(score2=" & score2.ToString & "),(score3=" & score3.ToString & ")", False, codDedo)
+                            'insertlog(cartaoFormatado, DateTime.Now, "Biometria Incompativel!", False, codDedo)
                             Return "/erro Digital Incompativel."
                         End If
                     End If
@@ -532,6 +574,4 @@ Public Class Service1
     '    Return "/erro Falha de Verificacao de Biometria"
 
     'End Function
-
-
 End Class
