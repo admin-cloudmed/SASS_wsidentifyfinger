@@ -247,6 +247,12 @@ Public Class DSIdentify
         
         Private columnDataFinalDispensa As DataColumn
         
+        Private columnNomeMae As DataColumn
+        
+        Private columnCPF As DataColumn
+        
+        Private columnRG As DataColumn
+        
         Private columnDataBin_Id As DataColumn
         
         Friend Sub New()
@@ -307,6 +313,24 @@ Public Class DSIdentify
             End Get
         End Property
         
+        Friend ReadOnly Property NomeMaeColumn As DataColumn
+            Get
+                Return Me.columnNomeMae
+            End Get
+        End Property
+        
+        Friend ReadOnly Property CPFColumn As DataColumn
+            Get
+                Return Me.columnCPF
+            End Get
+        End Property
+        
+        Friend ReadOnly Property RGColumn As DataColumn
+            Get
+                Return Me.columnRG
+            End Get
+        End Property
+        
         Friend ReadOnly Property DataBin_IdColumn As DataColumn
             Get
                 Return Me.columnDataBin_Id
@@ -331,9 +355,9 @@ Public Class DSIdentify
             Me.Rows.Add(row)
         End Sub
         
-        Public Overloads Function AddDataBinRow(ByVal Nome As String, ByVal Sexo As String, ByVal DataNasc As String, ByVal DispensaBiometria As String, ByVal DataFinalDispensa As String) As DataBinRow
+        Public Overloads Function AddDataBinRow(ByVal Nome As String, ByVal Sexo As String, ByVal DataNasc As String, ByVal DispensaBiometria As String, ByVal DataFinalDispensa As String, ByVal NomeMae As String, ByVal CPF As String, ByVal RG As String) As DataBinRow
             Dim rowDataBinRow As DataBinRow = CType(Me.NewRow,DataBinRow)
-            rowDataBinRow.ItemArray = New Object() {Nome, Sexo, DataNasc, DispensaBiometria, DataFinalDispensa, Nothing}
+            rowDataBinRow.ItemArray = New Object() {Nome, Sexo, DataNasc, DispensaBiometria, DataFinalDispensa, NomeMae, CPF, RG, Nothing}
             Me.Rows.Add(rowDataBinRow)
             Return rowDataBinRow
         End Function
@@ -358,6 +382,9 @@ Public Class DSIdentify
             Me.columnDataNasc = Me.Columns("DataNasc")
             Me.columnDispensaBiometria = Me.Columns("DispensaBiometria")
             Me.columnDataFinalDispensa = Me.Columns("DataFinalDispensa")
+            Me.columnNomeMae = Me.Columns("NomeMae")
+            Me.columnCPF = Me.Columns("CPF")
+            Me.columnRG = Me.Columns("RG")
             Me.columnDataBin_Id = Me.Columns("DataBin_Id")
         End Sub
         
@@ -372,6 +399,12 @@ Public Class DSIdentify
             Me.Columns.Add(Me.columnDispensaBiometria)
             Me.columnDataFinalDispensa = New DataColumn("DataFinalDispensa", GetType(System.String), Nothing, System.Data.MappingType.Attribute)
             Me.Columns.Add(Me.columnDataFinalDispensa)
+            Me.columnNomeMae = New DataColumn("NomeMae", GetType(System.String), Nothing, System.Data.MappingType.Attribute)
+            Me.Columns.Add(Me.columnNomeMae)
+            Me.columnCPF = New DataColumn("CPF", GetType(System.String), Nothing, System.Data.MappingType.Attribute)
+            Me.Columns.Add(Me.columnCPF)
+            Me.columnRG = New DataColumn("RG", GetType(System.String), Nothing, System.Data.MappingType.Attribute)
+            Me.Columns.Add(Me.columnRG)
             Me.columnDataBin_Id = New DataColumn("DataBin_Id", GetType(System.Int32), Nothing, System.Data.MappingType.Hidden)
             Me.Columns.Add(Me.columnDataBin_Id)
             Me.Constraints.Add(New UniqueConstraint("Constraint1", New DataColumn() {Me.columnDataBin_Id}, true))
@@ -380,6 +413,9 @@ Public Class DSIdentify
             Me.columnDataNasc.Namespace = ""
             Me.columnDispensaBiometria.Namespace = ""
             Me.columnDataFinalDispensa.Namespace = ""
+            Me.columnNomeMae.Namespace = ""
+            Me.columnCPF.Namespace = ""
+            Me.columnRG.Namespace = ""
             Me.columnDataBin_Id.AutoIncrement = true
             Me.columnDataBin_Id.AllowDBNull = false
             Me.columnDataBin_Id.Unique = true
@@ -507,6 +543,45 @@ Public Class DSIdentify
             End Set
         End Property
         
+        Public Property NomeMae As String
+            Get
+                Try 
+                    Return CType(Me(Me.tableDataBin.NomeMaeColumn),String)
+                Catch e As InvalidCastException
+                    Throw New StrongTypingException("Cannot get value because it is DBNull.", e)
+                End Try
+            End Get
+            Set
+                Me(Me.tableDataBin.NomeMaeColumn) = value
+            End Set
+        End Property
+        
+        Public Property CPF As String
+            Get
+                Try 
+                    Return CType(Me(Me.tableDataBin.CPFColumn),String)
+                Catch e As InvalidCastException
+                    Throw New StrongTypingException("Cannot get value because it is DBNull.", e)
+                End Try
+            End Get
+            Set
+                Me(Me.tableDataBin.CPFColumn) = value
+            End Set
+        End Property
+        
+        Public Property RG As String
+            Get
+                Try 
+                    Return CType(Me(Me.tableDataBin.RGColumn),String)
+                Catch e As InvalidCastException
+                    Throw New StrongTypingException("Cannot get value because it is DBNull.", e)
+                End Try
+            End Get
+            Set
+                Me(Me.tableDataBin.RGColumn) = value
+            End Set
+        End Property
+        
         Public Function IsNomeNull() As Boolean
             Return Me.IsNull(Me.tableDataBin.NomeColumn)
         End Function
@@ -545,6 +620,30 @@ Public Class DSIdentify
         
         Public Sub SetDataFinalDispensaNull()
             Me(Me.tableDataBin.DataFinalDispensaColumn) = System.Convert.DBNull
+        End Sub
+        
+        Public Function IsNomeMaeNull() As Boolean
+            Return Me.IsNull(Me.tableDataBin.NomeMaeColumn)
+        End Function
+        
+        Public Sub SetNomeMaeNull()
+            Me(Me.tableDataBin.NomeMaeColumn) = System.Convert.DBNull
+        End Sub
+        
+        Public Function IsCPFNull() As Boolean
+            Return Me.IsNull(Me.tableDataBin.CPFColumn)
+        End Function
+        
+        Public Sub SetCPFNull()
+            Me(Me.tableDataBin.CPFColumn) = System.Convert.DBNull
+        End Sub
+        
+        Public Function IsRGNull() As Boolean
+            Return Me.IsNull(Me.tableDataBin.RGColumn)
+        End Function
+        
+        Public Sub SetRGNull()
+            Me(Me.tableDataBin.RGColumn) = System.Convert.DBNull
         End Sub
         
         Public Function GetHistoricoDispensasRows() As HistoricoDispensasRow()
@@ -664,7 +763,7 @@ Public Class DSIdentify
         
         Public Overloads Function AddHistoricoDispensasRow(ByVal Data As String, ByVal DescricaoDispensa As String, ByVal LoginResponsavel As String, ByVal parentDataBinRowByDataBin_HistoricoDispensas As DataBinRow) As HistoricoDispensasRow
             Dim rowHistoricoDispensasRow As HistoricoDispensasRow = CType(Me.NewRow,HistoricoDispensasRow)
-            rowHistoricoDispensasRow.ItemArray = New Object() {Data, DescricaoDispensa, LoginResponsavel, parentDataBinRowByDataBin_HistoricoDispensas(5)}
+            rowHistoricoDispensasRow.ItemArray = New Object() {Data, DescricaoDispensa, LoginResponsavel, parentDataBinRowByDataBin_HistoricoDispensas(8)}
             Me.Rows.Add(rowHistoricoDispensasRow)
             Return rowHistoricoDispensasRow
         End Function

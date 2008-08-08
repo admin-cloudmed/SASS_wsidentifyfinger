@@ -23,6 +23,9 @@
 						<xs:attribute name="DataNasc" type="xs:string" />
 						<xs:attribute name="DispensaBiometria" type="xs:string" />
 						<xs:attribute name="DataFinalDispensa" type="xs:string" />
+						<xs:attribute name="NomeMae" type="xs:string" />
+						<xs:attribute name="CPF" type="xs:string" />
+						<xs:attribute name="RG" type="xs:string" />
 					</xs:complexType>
 				</xs:element>
 				<xs:element name="BiometriaDPLogs">

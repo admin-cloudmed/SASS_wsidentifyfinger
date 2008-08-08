@@ -219,12 +219,19 @@ Public Class Service1
             'separar (split) os campos separados c/ vírgula que chegam do layout
             Dim nome As String = dadosdousuario.Split(",")(1).Replace("""", "")
             Dim datanasc As String = dadosdousuario.Split(",")(2).Replace("""", "")
-            Dim sexo As String = dadosdousuario.Split(",")(4).Replace("""", "")
+            Dim sexo As String = dadosdousuario.Split(",")(3).Replace("""", "")
+            Dim nomeMae As String = dadosdousuario.Split(",")(4).Replace("""", "")
+            Dim cpf As String = dadosdousuario.Split(",")(5).Replace("""", "")
+            Dim rg As String = dadosdousuario.Split(",")(6).Replace("""", "")
+            rg = rg.Replace(Chr(13) & Chr(10), "")
+            rg = rg.Replace(Chr(13), "")
+            rg = rg.Replace(Chr(10), "")
+
 
             '!!##LAYOUT DOS DADOS DO USUÁRIO##!!: /PES,"JEAN PAULO ORLANDO SILVA","04/12/1978","","M"
             Dim dsDados As New DSIdentify
             'adiciona no data set a linha databin passando os parametros que chegam do layout
-            dsDados.DataBin.AddDataBinRow(nome, sexo, datanasc, "", "")
+            dsDados.DataBin.AddDataBinRow(nome, sexo, datanasc, "", "", nomeMae, cpf, rg)
 
             'Carregando templates do Banco de Dados
             SqlDataAdapter1.SelectCommand.CommandText = "SELECT * FROM BiometriaDP WHERE (Codigo like @Codigo) and (Dedo = @Dedo)"
