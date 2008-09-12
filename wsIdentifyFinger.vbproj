@@ -99,14 +99,14 @@
                     HintPath = "C:\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.Windows.Forms.dll"
                 />
                 <Reference
-                    Name = "Registro"
-                    AssemblyName = "Registro"
-                    HintPath = "..\Registro\bin\Registro.dll"
-                />
-                <Reference
                     Name = "AxInterop.GrFingerXLib"
                     AssemblyName = "AxInterop.GrFingerXLib"
                     HintPath = "bin\AxInterop.GrFingerXLib.dll"
+                />
+                <Reference
+                    Name = "Registro"
+                    AssemblyName = "Registro"
+                    HintPath = "..\Registro\bin\Registro.dll"
                 />
             </References>
             <Imports>

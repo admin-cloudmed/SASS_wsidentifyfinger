@@ -206,15 +206,6 @@ Public Class Service1
             'string com os dados do web service (usuário)
             Dim dadosdousuario As String = webservice.Autoriza(9, cartaoFormatado.Remove(cartaoFormatado.Length - 1, 1).PadLeft(16, "0"), 0, 0, 0, 0, 0, "", "", "", "", Misc.GetDadoWebConfig("Prototipo"))
             'Dim dadosdousuario As String = "/PES,""JEAN PAULO ORLANDO SILVA"",""04/12/1978"","""",""M"""
-            'dadosdousuario = "PES"
-            'dadosdousuario = "JEAN PAULO ORLANDO SILVA"
-            'dadosdousuario = "04/12/1978"
-            'dadosdousuario = ""
-            'dadosdousuario = "M"
-            'começando com...
-            'If dadosdousuario.IndexOf(",") = -1 Then
-            '    Return "/erro " & dadosdousuario
-            'End If
 
             'separar (split) os campos separados c/ vírgula que chegam do layout
             Dim nome As String = dadosdousuario.Split(",")(1).Replace("""", "")
@@ -248,26 +239,33 @@ Public Class Service1
                     'Atualizar dados, pq já existe o código gravado no banco
                     Try
                         Dim ComandoSQL As String
-                        ComandoSQL = "UPDATE BiometriaDP set Template1 = @Template1, Template2 = @Template2, Template3 = @Template3, DataBin = @DataBin WHERE (Codigo = @Codigo)"
+                        ComandoSQL = "UPDATE BiometriaDP set Template1 = @Template1, Template2 = @Template2, Template3 = @Template3 WHERE (Codigo = @Codigo)"
                         Dim myConnection As SqlConnection = New SqlConnection(Misc.GetDadoWebConfig("conexaoBiometria"))
                         Dim myCommand As SqlCommand = New SqlCommand(ComandoSQL, myConnection)
 
-                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template1", System.Data.SqlDbType.Image, 16, "Template1"))
-                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template2", System.Data.SqlDbType.Image, 16, "Template2"))
-                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template3", System.Data.SqlDbType.Image, 16, "Template3"))
-                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@DataBin", System.Data.SqlDbType.NText, 1073741823, "DataBin"))
+                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template1", System.Data.SqlDbType.VarBinary, 2147483647, "Template1"))
+                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template2", System.Data.SqlDbType.VarBinary, 2147483647, "Template2"))
+                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template3", System.Data.SqlDbType.VarBinary, 2147483647, "Template3"))
+                        'myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@DataBin", System.Data.SqlDbType.NText, 1073741823, "DataBin"))
                         myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Codigo", System.Data.SqlDbType.VarChar, 50, "Codigo"))
 
                         myCommand.Parameters("@Template1").Value = templateBin1.tpt
                         myCommand.Parameters("@Template2").Value = templateBin2.tpt
                         myCommand.Parameters("@Template3").Value = templateBin3.tpt
-                        myCommand.Parameters("@DataBin").Value = dsDados.GetXml
+                        'myCommand.Parameters("@DataBin").Value = dsDados.GetXml
                         myCommand.Parameters("@Codigo").Value = cartaoFormatado
 
+                        Dim QtdeItens As Integer
                         myCommand.Connection.Open()
-                        myCommand.ExecuteNonQuery()
+                        QtdeItens = myCommand.ExecuteNonQuery()
                         myCommand.Connection.Close()
-                        Return True
+                        If QtdeItens > 0 Then
+                            Return True
+                        Else
+                            Return "/erro SQL nao conseguiu atualizar o registro no Banco de Dados, nao houveram alterações na tabela de biometria"
+                            'Return False
+                        End If
+
                         'Adiciona ao Logs
                         insertlog(cartaoFormatado, DateTime.Now, "Biometria Cadastrada com Sucesso", True, codDedo)
                         Return "/ok"
@@ -296,13 +294,17 @@ Public Class Service1
                 SqlInsertCommand1.Parameters("@Template2").Value = templateBin2.tpt
                 SqlInsertCommand1.Parameters("@Template3").Value = templateBin3.tpt
 
+                Dim QtdeItens As Integer
                 SqlInsertCommand1.Connection.Open()
-                SqlInsertCommand1.ExecuteNonQuery()
+                qtdeitens = SqlInsertCommand1.ExecuteNonQuery()
                 SqlInsertCommand1.Connection.Close()
-
-                'Adiciona ao Logs
-                insertlog(cartaoFormatado, DateTime.Now, "Biometria Cadastrada com Sucesso", True, codDedo)
-                Return "/ok"
+                If qtdeitens > 0 Then
+                    'Adiciona ao Logs
+                    insertlog(cartaoFormatado, DateTime.Now, "Biometria Cadastrada com Sucesso", True, codDedo)
+                    Return "/ok"
+                Else
+                    Return "/erro SQL nao conseguiu inserir o registro no Banco de Dados, nao houveram alterações na tabela de biometria"
+                End If
             End If
             Exit Function
         Catch ex As Exception
@@ -421,19 +423,16 @@ Public Class Service1
                 If (resultado <> GrFingerXLib.GRConstants.GR_NOT_MATCH) And (resultado <> GrFingerXLib.GRConstants.GR_MATCH) Then
                     Dim a As GrFingerXLib.GRConstants
                     a = resultado
-
                     'Grava no Log
                     insertlog(cartaoFormatado, DateTime.Now, "Erro Desconhecido" & a, False, codDedo)
                     Return "/erro Erro Desconhecido." & a.ToString
                 End If
             End If
             Exit Function
-
         Catch ex As Exception
             'Grava no Log
             insertlog(cartaoFormatado, DateTime.Now, "Erro ao Verificar Biometria", False, codDedo)
             Return "/erro " & ex.Message
-
         End Try
 
         'Grava no Log
@@ -464,7 +463,6 @@ Public Class Service1
             Return "/Parametros Invalidos" & ex.Message
         End Try
     End Function
-
 
     '<WebMethod()> _ 
     ' Esta Function contém rotinas de validação usando drivers da Digital Persona
