@@ -246,13 +246,11 @@ Public Class Service1
                         myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template1", System.Data.SqlDbType.VarBinary, 2147483647, "Template1"))
                         myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template2", System.Data.SqlDbType.VarBinary, 2147483647, "Template2"))
                         myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template3", System.Data.SqlDbType.VarBinary, 2147483647, "Template3"))
-                        'myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@DataBin", System.Data.SqlDbType.NText, 1073741823, "DataBin"))
                         myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Codigo", System.Data.SqlDbType.VarChar, 50, "Codigo"))
 
                         myCommand.Parameters("@Template1").Value = templateBin1.tpt
                         myCommand.Parameters("@Template2").Value = templateBin2.tpt
                         myCommand.Parameters("@Template3").Value = templateBin3.tpt
-                        'myCommand.Parameters("@DataBin").Value = dsDados.GetXml
                         myCommand.Parameters("@Codigo").Value = cartaoFormatado
 
                         Dim QtdeItens As Integer
@@ -262,24 +260,23 @@ Public Class Service1
                         If QtdeItens > 0 Then
                             Return True
                         Else
-                            Return "/erro SQL nao conseguiu atualizar o registro no Banco de Dados, nao houveram alterações na tabela de biometria"
-                            'Return False
+                            Return "/erro SQL nao conseguiu atualizar o registro no Banco de Dados, nao houveram alterações na tabela de biometria."
                         End If
 
                         'Adiciona ao Logs
-                        insertlog(cartaoFormatado, DateTime.Now, "Biometria Cadastrada com Sucesso", True, codDedo)
+                        insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital Cadastrada com Sucesso.", True, codDedo)
                         Return "/ok"
                     Catch ex As Exception
                         Return False
                         'Adiciona ao Logs
-                        insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Biometria", False, codDedo)
-                        Return "/ok"
+                        insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Impressão Digital.", False, codDedo)
+                        Return "/erro Erro ao cadastrar Impressão Digital."
                     End Try
                 End If
                 If ds.BiometriaDP(0).IsTemplate1Null = True Or ds.BiometriaDP(0).Template1 Is Nothing = True Or ds.BiometriaDP(0).Template1.Length <> 0 Then
                     '!!!###GRAVANDO LOG###!!!
-                    insertlog(cartaoFormatado, DateTime.Now, "Biometria ja cadastrada", False, codDedo)
-                    Return "/erro Biometria ja Cadastrada"
+                    insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital já cadastrada.", False, codDedo)
+                    Return "/erro Impressão Digital já cadastrada."
                 End If
             Else
                 'Grava os templates no Banco de Dados
@@ -303,13 +300,13 @@ Public Class Service1
                     insertlog(cartaoFormatado, DateTime.Now, "Biometria Cadastrada com Sucesso", True, codDedo)
                     Return "/ok"
                 Else
-                    Return "/erro SQL nao conseguiu inserir o registro no Banco de Dados, nao houveram alterações na tabela de biometria"
+                    Return "/erro SQL nao conseguiu inserir o registro no Banco de Dados, nao houveram alterações na tabela de biometria."
                 End If
             End If
             Exit Function
         Catch ex As Exception
             '!!!###GRAVANDO LOG###!!!
-            insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Biometria", False, codDedo)
+            insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Impressão Digital.", False, codDedo)
             Return "/erro " & ex.Message
         End Try
     End Function
@@ -323,8 +320,6 @@ Public Class Service1
             Dim templateBin_recebido As New TTemplate
 
             templateBin_recebido.tpt = template
-
-            'Dim templateVerify As System.Object = templateBin_recebido
 
             '-----------------------------------------------------------
             ' Lendo template binario gravado no banco de dados
@@ -353,68 +348,77 @@ Public Class Service1
             'verifica se esta vazio, nulo
             If (ds.BiometriaDP.Rows.Count = 0) Then
                 'Biometria não existe, grava no log
-                insertlog(cartaoFormatado, DateTime.Now, "Biometria nao cadastrada", False, codDedo)
-                Return "/erro Biometria nao Cadastrada"
+                insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital não cadastrada.", False, codDedo)
+                Return "/erro Impressão Digital não cadastrada."
                 Exit Function
             End If
 
             If ds.BiometriaDP(0).IsTemplate1Null = True Or ds.BiometriaDP(0).Template1 Is Nothing = True Then
                 'Biometria não existe, grava no log
-                insertlog(cartaoFormatado, DateTime.Now, "Biometria nao cadastrada", False, codDedo)
-                Return "/erro Biometria nao Cadastrada"
+                insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital não cadastrada.", False, codDedo)
+                Return "/erro Impressão Digital não cadastrada."
             Else
+                Dim GrFinger As GrFingerXLib.GrFingerXCtrl
+                Dim SensibilidadeDeVerificacao As Integer = CInt(Misc.GetDadoWebConfig("SensibilidadeDeVerificacao"))
+
+                'O valor máximo permitido é 200, e o valor mínimo permitido é 10
+                If (SensibilidadeDeVerificacao < 10) Or _
+                   (SensibilidadeDeVerificacao > 200) Then
+                    SensibilidadeDeVerificacao = 25 'Valor default = 25
+                End If
+
+                Dim Resultado_de_Parametrizacao As Integer
+
                 templateGravado1 = ds.BiometriaDP(0).Template1
                 templateGravado2 = ds.BiometriaDP(0).Template2
                 templateGravado3 = ds.BiometriaDP(0).Template3
 
                 Dim resultado, score1, score2, score3 As Integer
-                'Dim resultado, score As Integer
 
-                Dim GrFinger As GrFingerXLib.GrFingerXCtrl
                 GrFinger = New GrFingerXLib.GrFingerXCtrl
                 GrFinger.Initialize()
+                Resultado_de_Parametrizacao = GrFinger.SetVerifyParameters(SensibilidadeDeVerificacao, 180, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
 
                 resultado = GrFinger.Verify _
                                    (templateBin_recebido.tpt, templateGravado1, score1, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
-                '(templateBin_recebido.tpt, templateGravado1, score, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
 
                 'Verificação com sucesso! Grava no log e retorna /ok
                 If (resultado = GrFingerXLib.GRConstants.GR_MATCH) Then
                     insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso(1o. template), score: " & score1.ToString, True, codDedo)
-                    'insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso!", True, codDedo)
                     Return "/ok "
                 End If
 
                 'Impressão digital não reconhecida, verificar novamente com 2o. template
                 If (resultado = GrFingerXLib.GRConstants.GR_NOT_MATCH) Then
+                    'Registrando no LOG que não foi possível verificação na 1a. tentativa
+                    insertlog(cartaoFormatado, DateTime.Now, "ERRO: 1a. Verificação incompatível com score: " & score1.ToString, False, codDedo)
+
                     'não passou na primeira, tentando 2a.
                     resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado2, score2, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
-                    'resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado2, score, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
 
                     'Verificação com sucesso! Grava no log e retorna /ok
                     If (resultado = GrFingerXLib.GRConstants.GR_MATCH) Then
                         insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso(2o. template), score: " & score2.ToString, True, codDedo)
-                        'insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso!", True, codDedo)
                         Return "/ok "
                     End If
 
                     'Impressão digital não reconhecida, verificar novamente com 3o. template
                     If (resultado = GrFingerXLib.GRConstants.GR_NOT_MATCH) Then
+                        'Registrando no LOG que não foi possível verificação na 2a. tentativa
+                        insertlog(cartaoFormatado, DateTime.Now, "ERRO: 2a. Verificação incompatível com score: " & score2.ToString, False, codDedo)
+
                         'não passou na segunda, tentando 3a. e última
                         resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado3, score3, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
-                        'resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado3, score, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
 
                         'Verificação com sucesso! Grava no log e retorna /ok
                         If (resultado = GrFingerXLib.GRConstants.GR_MATCH) Then
                             insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso (3o. template), score: " & score3.ToString, True, codDedo)
-                            'insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso!", True, codDedo)
                             Return "/ok "
                         End If
 
                         'Impressão digital não reconhecida na 3a. tentativa, grava no log e retorna /erro
                         If (resultado = GrFingerXLib.GRConstants.GR_NOT_MATCH) Then
                             insertlog(cartaoFormatado, DateTime.Now, "Biometria Incompativel.(score1=" & score1.ToString & "),(score2=" & score2.ToString & "),(score3=" & score3.ToString & ")", False, codDedo)
-                            'insertlog(cartaoFormatado, DateTime.Now, "Biometria Incompativel!", False, codDedo)
                             Return "/erro Digital Incompativel."
                         End If
                     End If
@@ -424,20 +428,20 @@ Public Class Service1
                     Dim a As GrFingerXLib.GRConstants
                     a = resultado
                     'Grava no Log
-                    insertlog(cartaoFormatado, DateTime.Now, "Erro Desconhecido" & a, False, codDedo)
-                    Return "/erro Erro Desconhecido." & a.ToString
+                    insertlog(cartaoFormatado, DateTime.Now, "Erro Desconhecido: " & a, False, codDedo)
+                    Return "/erro Erro Desconhecido: " & a.ToString
                 End If
             End If
             Exit Function
         Catch ex As Exception
             'Grava no Log
-            insertlog(cartaoFormatado, DateTime.Now, "Erro ao Verificar Biometria", False, codDedo)
+            insertlog(cartaoFormatado, DateTime.Now, "Erro ao Verificar Biometria: " & ex.Message, False, codDedo)
             Return "/erro " & ex.Message
         End Try
 
         'Grava no Log
-        insertlog(cartaoFormatado, DateTime.Now, "Erro ao Verificar Biometria", False, codDedo)
-        Return "/erro Falha de Verificacao de Biometria"
+        insertlog(cartaoFormatado, DateTime.Now, "Falha de Verificacao de Biometria.", False, codDedo)
+        Return "/erro Falha de Verificacao de Biometria."
     End Function
 
     <WebMethod()> _
