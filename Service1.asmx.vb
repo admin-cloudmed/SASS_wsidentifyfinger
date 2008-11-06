@@ -5,7 +5,8 @@ Imports System.Data.SqlClient
 <System.Web.Services.WebService(Namespace := "http://tempuri.org/wsIdentifyFinger/Service1")> _
 Public Class Service1
     Inherits System.Web.Services.WebService
-    Dim ds As New dsidentify
+    Dim DS As New DSIdentify
+    Dim NumeroDoDedo As Integer
 
 #Region " Web Services Designer Generated Code "
 
@@ -190,125 +191,52 @@ Public Class Service1
         Try
             SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
 
-            Dim templateBin1 As New TTemplate
-            Dim templateBin2 As New TTemplate
-            Dim templateBin3 As New TTemplate
+            NumeroDoDedo = codDedo
 
-            templateBin1.tpt = template1
-            templateBin2.tpt = template2
-            templateBin3.tpt = template3
+            Dim templateBin1 As New TTemplate : templateBin1.tpt = template1
+            Dim templateBin2 As New TTemplate : templateBin2.tpt = template2
+            Dim templateBin3 As New TTemplate : templateBin3.tpt = template3
+
+            Dim UsuarioJaExiste As Boolean = False
+            Dim DataSetIdentify As New DSIdentify
 
             cartaoFormatado = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
-            '!!!###WEB SERVICE###!!! referencia o web service c/ os dados do usuárioss
-            Dim webservice As New WebReference.Autorizador
-            webservice.Url = Misc.GetDadoWebConfig("UrlWebService")
+            UsuarioJaExiste = VerificaSeUsuarioExiste(cartaoFormatado)
 
-            'string com os dados do web service (usuário)
-            Dim dadosdousuario As String = webservice.Autoriza(9, cartaoFormatado.Remove(cartaoFormatado.Length - 1, 1).PadLeft(16, "0"), 0, 0, 0, 0, 0, "", "", "", "", Misc.GetDadoWebConfig("Prototipo"))
-            'Dim dadosdousuario As String = "/PES,""JEAN PAULO ORLANDO SILVA"",""04/12/1978"","""",""M"""
+            If (UsuarioJaExiste) Then
+                LeDadosDoUsuarioNoBancoDeDados(cartaoFormatado, DataSetIdentify)
+            Else
+                LeDadosDoUsuarioNoAutorizador(cartaoFormatado, DataSetIdentify)
+            End If
 
-            'separar (split) os campos separados c/ vírgula que chegam do layout
-            Dim nome As String = dadosdousuario.Split(",")(1).Replace("""", "")
-            Dim datanasc As String = dadosdousuario.Split(",")(2).Replace("""", "")
-            Dim sexo As String = dadosdousuario.Split(",")(3).Replace("""", "")
-            Dim nomeMae As String = dadosdousuario.Split(",")(4).Replace("""", "")
-            Dim cpf As String = dadosdousuario.Split(",")(5).Replace("""", "")
-            Dim rg As String = dadosdousuario.Split(",")(6).Replace("""", "")
-            rg = rg.Replace(Chr(13) & Chr(10), "")
-            rg = rg.Replace(Chr(13), "")
-            rg = rg.Replace(Chr(10), "")
-
-
-            '!!##LAYOUT DOS DADOS DO USUÁRIO##!!: /PES,"JEAN PAULO ORLANDO SILVA","04/12/1978","","M"
-            Dim dsDados As New DSIdentify
-            'adiciona no data set a linha databin passando os parametros que chegam do layout
-            dsDados.DataBin.AddDataBinRow(nome, sexo, datanasc, "", "", nomeMae, cpf, rg)
-
-            'Carregando templates do Banco de Dados
-            SqlDataAdapter1.SelectCommand.CommandText = "SELECT * FROM BiometriaDP WHERE (Codigo like @Codigo) and (Dedo = @Dedo)"
-            SqlDataAdapter1.SelectCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Codigo", System.Data.SqlDbType.VarChar, 50, "Codigo"))
-            SqlDataAdapter1.SelectCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Dedo", System.Data.SqlDbType.Int, 4, "Dedo"))
-
-            SqlDataAdapter1.SelectCommand.Parameters("@Codigo").Value = cartaoFormatado.Substring(0, 15) & "%"
-            SqlDataAdapter1.SelectCommand.Parameters("@Dedo").Value = codDedo
-            SqlDataAdapter1.Fill(ds)
-
-            'Verificando se já existe
-            If ds.BiometriaDP.Rows.Count > 0 Then
-                If ds.BiometriaDP(0).IsTemplate1Null = True Then
-                    'Atualizar dados, pq já existe o código gravado no banco
-                    Try
-                        Dim ComandoSQL As String
-                        ComandoSQL = "UPDATE BiometriaDP set Template1 = @Template1, Template2 = @Template2, Template3 = @Template3 WHERE (Codigo = @Codigo)"
-                        Dim myConnection As SqlConnection = New SqlConnection(Misc.GetDadoWebConfig("conexaoBiometria"))
-                        Dim myCommand As SqlCommand = New SqlCommand(ComandoSQL, myConnection)
-
-                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template1", System.Data.SqlDbType.VarBinary, 2147483647, "Template1"))
-                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template2", System.Data.SqlDbType.VarBinary, 2147483647, "Template2"))
-                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template3", System.Data.SqlDbType.VarBinary, 2147483647, "Template3"))
-                        myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Codigo", System.Data.SqlDbType.VarChar, 50, "Codigo"))
-
-                        myCommand.Parameters("@Template1").Value = templateBin1.tpt
-                        myCommand.Parameters("@Template2").Value = templateBin2.tpt
-                        myCommand.Parameters("@Template3").Value = templateBin3.tpt
-                        myCommand.Parameters("@Codigo").Value = cartaoFormatado
-
-                        Dim QtdeItens As Integer
-                        myCommand.Connection.Open()
-                        QtdeItens = myCommand.ExecuteNonQuery()
-                        myCommand.Connection.Close()
-                        If QtdeItens > 0 Then
-                            Return True
-                        Else
-                            Return "/erro SQL nao conseguiu atualizar o registro no Banco de Dados, nao houveram alterações na tabela de biometria."
-                        End If
-
-                        'Adiciona ao Logs
+            If (UsuarioJaExiste) Then
+                If (DataSetIdentify.BiometriaDP(0).IsTemplate1Null) = True Then 'Existe o registro, mas ainda não existe a biometria cadastrada
+                    If (GravaTeplatesNoBanco(cartaoFormatado, templateBin1, templateBin2, templateBin3)) Then
                         insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital Cadastrada com Sucesso.", True, codDedo)
                         Return "/ok"
-                    Catch ex As Exception
-                        Return False
-                        'Adiciona ao Logs
+                    Else
                         insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Impressão Digital.", False, codDedo)
                         Return "/erro Erro ao cadastrar Impressão Digital."
-                    End Try
-                End If
-                If ds.BiometriaDP(0).IsTemplate1Null = True Or ds.BiometriaDP(0).Template1 Is Nothing = True Or ds.BiometriaDP(0).Template1.Length <> 0 Then
-                    '!!!###GRAVANDO LOG###!!!
+                    End If
+                Else
                     insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital já cadastrada.", False, codDedo)
                     Return "/erro Impressão Digital já cadastrada."
                 End If
             Else
-                'Grava os templates no Banco de Dados
-                SqlInsertCommand1.CommandText = "INSERT INTO BiometriaDP(Codigo, Dedo, DataBin, Template1, Template2, Template3) VALUES (@Codigo, @Dedo, @DataBin, @Template1, @Template2, @Template3)"
-
-                SqlInsertCommand1.Parameters("@Codigo").Value = cartaoFormatado
-                SqlInsertCommand1.Parameters("@Dedo").Value = codDedo
-                'pegar o xml do databin que chega no dataset
-                SqlInsertCommand1.Parameters("@DataBin").Value = dsDados.GetXml
-
-                SqlInsertCommand1.Parameters("@Template1").Value = templateBin1.tpt
-                SqlInsertCommand1.Parameters("@Template2").Value = templateBin2.tpt
-                SqlInsertCommand1.Parameters("@Template3").Value = templateBin3.tpt
-
-                Dim QtdeItens As Integer
-                SqlInsertCommand1.Connection.Open()
-                qtdeitens = SqlInsertCommand1.ExecuteNonQuery()
-                SqlInsertCommand1.Connection.Close()
-                If qtdeitens > 0 Then
-                    'Adiciona ao Logs
-                    insertlog(cartaoFormatado, DateTime.Now, "Biometria Cadastrada com Sucesso", True, codDedo)
+                If (GravaNovosTemplatesDoUsuarioNoBanco(cartaoFormatado, templateBin1, templateBin2, templateBin3, DataSetIdentify)) Then
+                    insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital Cadastrada com Sucesso.", True, codDedo)
                     Return "/ok"
                 Else
-                    Return "/erro SQL nao conseguiu inserir o registro no Banco de Dados, nao houveram alterações na tabela de biometria."
+                    insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Impressão Digital.", False, codDedo)
+                    Return "/erro Erro ao cadastrar Impressão Digital."
                 End If
             End If
-            Exit Function
+
         Catch ex As Exception
-            '!!!###GRAVANDO LOG###!!!
-            insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Impressão Digital.", False, codDedo)
-            Return "/erro " & ex.Message
+            insertlog(cartaoFormatado, DateTime.Now, "Erro: " & ex.Message, False, codDedo)
+            Return "/erro Comunique erro " & ex.Message
         End Try
+
     End Function
 
     <WebMethod()> _
@@ -340,20 +268,20 @@ Public Class Service1
 
             SqlDataAdapter1.SelectCommand.Parameters("@Codigo").Value = cartaoFormatado.Substring(0, 15) & "%"
             SqlDataAdapter1.SelectCommand.Parameters("@Dedo").Value = codDedo
-            SqlDataAdapter1.Fill(ds)
+            SqlDataAdapter1.Fill(DS)
 
             '!!!###SE VERIFICAR E NAO ESTIVER CADASTRADO, AVISAR PARA CADASTRAR###!!!
             '!!!###SE TEMPLATE FOR NULO, AVISAR PARA CADASTRAR###!!!
 
             'verifica se esta vazio, nulo
-            If (ds.BiometriaDP.Rows.Count = 0) Then
+            If (DS.BiometriaDP.Rows.Count = 0) Then
                 'Biometria não existe, grava no log
                 insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital não cadastrada.", False, codDedo)
                 Return "/erro Impressão Digital não cadastrada."
                 Exit Function
             End If
 
-            If ds.BiometriaDP(0).IsTemplate1Null = True Or ds.BiometriaDP(0).Template1 Is Nothing = True Then
+            If DS.BiometriaDP(0).IsTemplate1Null = True Or DS.BiometriaDP(0).Template1 Is Nothing = True Then
                 'Biometria não existe, grava no log
                 insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital não cadastrada.", False, codDedo)
                 Return "/erro Impressão Digital não cadastrada."
@@ -369,9 +297,9 @@ Public Class Service1
 
                 Dim Resultado_de_Parametrizacao As Integer
 
-                templateGravado1 = ds.BiometriaDP(0).Template1
-                templateGravado2 = ds.BiometriaDP(0).Template2
-                templateGravado3 = ds.BiometriaDP(0).Template3
+                templateGravado1 = DS.BiometriaDP(0).Template1
+                templateGravado2 = DS.BiometriaDP(0).Template2
+                templateGravado3 = DS.BiometriaDP(0).Template3
 
                 Dim resultado, score1, score2, score3 As Integer
 
@@ -451,7 +379,7 @@ Public Class Service1
             SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
             Dim cartaoFormatado As String = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
 
-            '!!!###GRAVANDO LOG NO BANCO###!!!
+            'Grava mensagem de LOG no Banco de Dados
             SqlDataAdapter2.InsertCommand.CommandText = "INSERT INTO BiometriaDPLogs(Codigo, DataHora, Descricao, VerificacaoOK, CodDedo) VALUES (@Codigo, @DataHora, @Descricao, @VerificacaoOK, @CodDedo)"
             SqlDataAdapter2.InsertCommand.Parameters("@Codigo").Value = cartaoFormatado
             SqlDataAdapter2.InsertCommand.Parameters("@DataHora").Value = dthr
@@ -466,7 +394,148 @@ Public Class Service1
         Catch ex As Exception
             Return "/Parametros Invalidos" & ex.Message
         End Try
+
     End Function
+
+#Region " Funções usadas pela WebMethod CadastraFinger "
+
+    'LeDadosDoUsuarioNoAutorizador
+    '=============================
+    'Esta função foi criada para fazer a integação com o Autorizador do Plano de Saúde que deve responder com
+    'os dados do usuário pesquisado. Estes dados serão gravados na coluna DATABIN da Tabela BiometriaDP em 
+    'formato XML (XMLBIN)
+    Function LeDadosDoUsuarioNoAutorizador(ByVal cartaoFormatado As String, ByRef DataSetIdentify As DSIdentify) As Boolean
+        Dim WEBService As New WebReference.Autorizador : WEBService.Url = Misc.GetDadoWebConfig("UrlWebService")
+        Dim NomeDoUsuario, DataDeNascimento, SexoDoUsuario, NomeDaMaeDoUsuario, CPF_DoUsuario, RG_DoUsuario As String
+
+        'string com os dados do web service (usuário)
+        'Exemplo: => Dim Dados_do_Usuario As String = "/PES,""JEAN PAULO ORLANDO SILVA"",""04/12/1978"","""",""M"""
+        Dim Dados_do_Usuario As String = WEBService.Autoriza(9, cartaoFormatado.Remove(cartaoFormatado.Length - 1, 1).PadLeft(16, "0"), 0, 0, 0, 0, 0, "", "", "", "", Misc.GetDadoWebConfig("Prototipo"))
+
+        DataSetIdentify.Clear()
+
+        If (Dados_do_Usuario.Trim <> "") Then
+            Try
+                'separar (split) os campos separados c/ vírgula que chegam do layout
+                NomeDoUsuario = Dados_do_Usuario.Split(",")(1).Replace("""", "")
+                DataDeNascimento = Dados_do_Usuario.Split(",")(2).Replace("""", "")
+                SexoDoUsuario = Dados_do_Usuario.Split(",")(3).Replace("""", "")
+                NomeDaMaeDoUsuario = Dados_do_Usuario.Split(",")(4).Replace("""", "")
+                CPF_DoUsuario = Dados_do_Usuario.Split(",")(5).Replace("""", "")
+                RG_DoUsuario = Dados_do_Usuario.Split(",")(6).Replace("""", "")
+
+                RG_DoUsuario = RG_DoUsuario.Replace(Chr(13) & Chr(10), "")
+                RG_DoUsuario = RG_DoUsuario.Replace(Chr(13), "")
+                RG_DoUsuario = RG_DoUsuario.Replace(Chr(10), "")
+
+                'Adicionando no dataset a linha databin passando os parametros que chegaram do layout
+                DataSetIdentify.DataBin.AddDataBinRow(NomeDoUsuario, SexoDoUsuario, DataDeNascimento, "", "", NomeDaMaeDoUsuario, CPF_DoUsuario, RG_DoUsuario)
+                Return True
+            Catch ex As Exception
+                insertlog(cartaoFormatado, DateTime.Now, "ERRO: Resposta do autorizador inválida, Erro=" & ex.Message, False, NumeroDoDedo)
+                Return False
+            End Try
+        Else
+            insertlog(cartaoFormatado, DateTime.Now, "ERRO: Resposta do autorizador está vazio", False, NumeroDoDedo)
+            Return False
+        End If
+    End Function
+
+    Function CarregaDatasetDoUsuario(ByVal codigoUsuario As String, ByRef ds As DSIdentify) As Boolean
+        Try
+            ds.Clear()
+            SqlDataAdapter1.SelectCommand.CommandText = "SELECT * FROM BiometriaDP WHERE (Codigo like @Codigo) and (Dedo = @Dedo)"
+            SqlDataAdapter1.SelectCommand.Parameters.Clear()
+            SqlDataAdapter1.SelectCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Codigo", System.Data.SqlDbType.VarChar, 50, "Codigo"))
+            SqlDataAdapter1.SelectCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Dedo", System.Data.SqlDbType.Int, 4, "Dedo"))
+
+            SqlDataAdapter1.SelectCommand.Parameters("@Codigo").Value = codigoUsuario.Substring(0, 15) & "%"
+            SqlDataAdapter1.SelectCommand.Parameters("@Dedo").Value = NumeroDoDedo
+            SqlDataAdapter1.Fill(ds)
+            Return True
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Function VerificaSeUsuarioExiste(ByVal codigoUsuario As String) As Boolean
+        If (CarregaDatasetDoUsuario(codigoUsuario, DS)) Then
+            If (DS.BiometriaDP.Rows.Count) > 0 Then Return True Else Return False
+        Else
+            Return False
+        End If
+    End Function
+
+    Function LeDadosDoUsuarioNoBancoDeDados(ByVal codigoUsuario As String, ByRef DataSetIdentify As DSIdentify) As Boolean
+        Return (CarregaDatasetDoUsuario(codigoUsuario, DataSetIdentify))
+    End Function
+
+    Function GravaTeplatesNoBanco(ByVal CodigoUsuario As String, ByVal TemplateBin1 As TTemplate, ByVal TemplateBin2 As TTemplate, ByVal TemplateBin3 As TTemplate) As Boolean
+        'Atualizar dados, pq já existe o código gravado no banco
+        Try
+            Dim ComandoSQL As String
+            ComandoSQL = "UPDATE BiometriaDP set Template1 = @Template1, Template2 = @Template2, Template3 = @Template3 WHERE (Codigo = @Codigo) and (Dedo = @Dedo)"
+            Dim myConnection As SqlConnection = New SqlConnection(Misc.GetDadoWebConfig("conexaoBiometria"))
+            Dim myCommand As SqlCommand = New SqlCommand(ComandoSQL, myConnection)
+
+            myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template1", System.Data.SqlDbType.VarBinary, 2147483647, "Template1"))
+            myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template2", System.Data.SqlDbType.VarBinary, 2147483647, "Template2"))
+            myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Template3", System.Data.SqlDbType.VarBinary, 2147483647, "Template3"))
+            myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Codigo", System.Data.SqlDbType.VarChar, 50, "Codigo"))
+            myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Dedo", System.Data.SqlDbType.Int, 4, "Dedo"))
+
+            myCommand.Parameters("@Template1").Value = TemplateBin1.tpt
+            myCommand.Parameters("@Template2").Value = TemplateBin2.tpt
+            myCommand.Parameters("@Template3").Value = TemplateBin3.tpt
+            myCommand.Parameters("@Codigo").Value = CodigoUsuario
+            myCommand.Parameters("@Dedo").Value = NumeroDoDedo
+
+            Dim QtdeItens As Integer
+            myCommand.Connection.Open()
+            QtdeItens = myCommand.ExecuteNonQuery()
+            myCommand.Connection.Close()
+
+            If QtdeItens = 0 Then Return False
+
+            Return True
+        Catch ex As Exception
+            insertlog(CodigoUsuario, DateTime.Now, "ERRO ao gravar templates no Bando de Dados: " & ex.Message, False, NumeroDoDedo)
+            Return False
+        End Try
+    End Function
+
+    Public Function GravaNovosTemplatesDoUsuarioNoBanco(ByVal CodigoUsuario As String, ByVal TemplateBin1 As TTemplate, ByVal TemplateBin2 As TTemplate, ByVal TemplateBin3 As TTemplate, ByVal dataSetIdentify As DSIdentify) As Boolean
+        Try
+            'Grava os templates no Banco de Dados
+            SqlInsertCommand1.CommandText = "INSERT INTO BiometriaDP(Codigo, Dedo, DataBin, Template1, Template2, Template3) VALUES (@Codigo, @Dedo, @DataBin, @Template1, @Template2, @Template3)"
+
+            SqlInsertCommand1.Parameters("@Codigo").Value = CodigoUsuario
+            SqlInsertCommand1.Parameters("@Dedo").Value = NumeroDoDedo
+            'pegar o xml do databin que chega no dataset
+            SqlInsertCommand1.Parameters("@DataBin").Value = dataSetIdentify.GetXml
+
+            SqlInsertCommand1.Parameters("@Template1").Value = TemplateBin1.tpt
+            SqlInsertCommand1.Parameters("@Template2").Value = TemplateBin2.tpt
+            SqlInsertCommand1.Parameters("@Template3").Value = TemplateBin3.tpt
+
+            Dim QtdeItens As Integer
+            SqlInsertCommand1.Connection.Open()
+            QtdeItens = SqlInsertCommand1.ExecuteNonQuery()
+            SqlInsertCommand1.Connection.Close()
+
+            If QtdeItens > 0 Then
+                insertlog(CodigoUsuario, DateTime.Now, "Biometria Cadastrada com Sucesso", True, NumeroDoDedo)
+                Return True
+            Else
+                Return False
+            End If
+        Catch ex As Exception
+            insertlog(CodigoUsuario, DateTime.Now, "ERRO ao gravar novo usuário no Bando de Dados: " & ex.Message, False, NumeroDoDedo)
+            Return False
+        End Try
+
+    End Function
+#End Region
 
     '<WebMethod()> _ 
     ' Esta Function contém rotinas de validação usando drivers da Digital Persona
