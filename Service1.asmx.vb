@@ -276,8 +276,8 @@ Public Class Service1
             'verifica se esta vazio, nulo
             If (DS.BiometriaDP.Rows.Count = 0) Then
                 'Biometria não existe, grava no log
-                insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital não cadastrada.", False, codDedo)
-                Return "/erro Impressão Digital não cadastrada."
+                insertlog(cartaoFormatado, DateTime.Now, "Código do usuário não cadastrado.", False, codDedo)
+                Return "/erro Código do usuário não cadastrado."
                 Exit Function
             End If
 
