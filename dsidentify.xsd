@@ -26,6 +26,7 @@
 						<xs:attribute name="NomeMae" type="xs:string" />
 						<xs:attribute name="CPF" type="xs:string" />
 						<xs:attribute name="RG" type="xs:string" />
+						<xs:attribute name="Idade" type="xs:int" />
 					</xs:complexType>
 				</xs:element>
 				<xs:element name="BiometriaDPLogs">
