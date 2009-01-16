@@ -187,7 +187,7 @@ Public Class Service1
 #End Region
 
     <WebMethod()> _
-    Public Function CadastraFinger(ByVal codUsuario As String, ByVal template1 As Byte(), ByVal template2 As Byte(), ByVal template3 As Byte(), ByVal codDedo As Integer, ByVal cartaoFormatado As String) As String
+    Public Function CadastraFinger(ByVal codUsuario As String, ByVal template1 As Byte(), ByVal template2 As Byte(), ByVal template3 As Byte(), ByVal codDedo As Integer, ByVal cartaoFormatado As String, ByVal codPrestador As String) As String
         Try
             SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
 
@@ -204,43 +204,45 @@ Public Class Service1
             UsuarioJaExiste = VerificaSeUsuarioExiste(cartaoFormatado)
 
             If (UsuarioJaExiste) Then
+                '''Consulta dados do usuário no banco de dados (xml)
                 LeDadosDoUsuarioNoBancoDeDados(cartaoFormatado, DataSetIdentify)
             Else
+                '''Consulta dados do usuário no autorizador da Dual
                 LeDadosDoUsuarioNoAutorizador(cartaoFormatado, DataSetIdentify)
             End If
 
             If (UsuarioJaExiste) Then
                 If (DataSetIdentify.BiometriaDP(0).IsTemplate1Null) = True Then 'Existe o registro, mas ainda não existe a biometria cadastrada
-                    If (GravaTeplatesNoBanco(cartaoFormatado, templateBin1, templateBin2, templateBin3)) Then
-                        insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital Cadastrada com Sucesso.", True, codDedo)
+                    If (GravaTeplatesNoBanco(cartaoFormatado, templateBin1, templateBin2, templateBin3, codPrestador)) Then
+                        insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital Cadastrada com Sucesso.", True, codDedo, codPrestador)
                         Return "/ok"
                     Else
-                        insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Impressão Digital.", False, codDedo)
+                        insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Impressão Digital.", False, codDedo, codPrestador)
                         Return "/erro Erro ao cadastrar Impressão Digital."
                     End If
                 Else
-                    insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital já cadastrada.", False, codDedo)
+                    insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital já cadastrada.", False, codDedo, codPrestador)
                     Return "/erro Impressão Digital já cadastrada."
                 End If
             Else
-                If (GravaNovosTemplatesDoUsuarioNoBanco(cartaoFormatado, templateBin1, templateBin2, templateBin3, DataSetIdentify)) Then
-                    insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital Cadastrada com Sucesso.", True, codDedo)
+                If (GravaNovosTemplatesDoUsuarioNoBanco(cartaoFormatado, templateBin1, templateBin2, templateBin3, DataSetIdentify, codPrestador)) Then
+                    insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital Cadastrada com Sucesso.", True, codDedo, codPrestador)
                     Return "/ok"
                 Else
-                    insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Impressão Digital.", False, codDedo)
+                    insertlog(cartaoFormatado, DateTime.Now, "Erro ao Cadastrar Impressão Digital.", False, codDedo, codPrestador)
                     Return "/erro Erro ao cadastrar Impressão Digital."
                 End If
             End If
 
         Catch ex As Exception
-            insertlog(cartaoFormatado, DateTime.Now, "Erro: " & ex.Message, False, codDedo)
+            insertlog(cartaoFormatado, DateTime.Now, "Erro: " & ex.Message, False, codDedo, codPrestador)
             Return "/erro Comunique erro " & ex.Message
         End Try
 
     End Function
 
     <WebMethod()> _
-    Public Function validaFinger(ByVal codUsuario As String, ByVal template As Byte(), ByVal codDedo As Integer, ByVal cartaoFormatado As String) As String
+    Public Function validaFinger(ByVal codUsuario As String, ByVal template As Byte(), ByVal codDedo As Integer, ByVal cartaoFormatado As String, ByVal codPrestador As String) As String
         Try
             SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
             cartaoFormatado = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
@@ -276,14 +278,14 @@ Public Class Service1
             'verifica se esta vazio, nulo
             If (DS.BiometriaDP.Rows.Count = 0) Then
                 'Biometria não existe, grava no log
-                insertlog(cartaoFormatado, DateTime.Now, "Código do usuário não cadastrado.", False, codDedo)
+                insertlog(cartaoFormatado, DateTime.Now, "Código do usuário não cadastrado.", False, codDedo, codPrestador)
                 Return "/erro Código do usuário não cadastrado."
                 Exit Function
             End If
 
             If DS.BiometriaDP(0).IsTemplate1Null = True Or DS.BiometriaDP(0).Template1 Is Nothing = True Then
                 'Biometria não existe, grava no log
-                insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital não cadastrada.", False, codDedo)
+                insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital não cadastrada.", False, codDedo, codPrestador)
                 Return "/erro Impressão Digital não cadastrada."
             Else
                 Dim GrFinger As GrFingerXLib.GrFingerXCtrl
@@ -312,41 +314,41 @@ Public Class Service1
 
                 'Verificação com sucesso! Grava no log e retorna /ok
                 If (resultado = GrFingerXLib.GRConstants.GR_MATCH) Then
-                    insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso(1o. template), score: " & score1.ToString, True, codDedo)
+                    insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso(1o. template), score: " & score1.ToString, True, codDedo, codPrestador)
                     Return "/ok "
                 End If
 
                 'Impressão digital não reconhecida, verificar novamente com 2o. template
                 If (resultado = GrFingerXLib.GRConstants.GR_NOT_MATCH) Then
                     'Registrando no LOG que não foi possível verificação na 1a. tentativa
-                    insertlog(cartaoFormatado, DateTime.Now, "ERRO: 1a. Verificação incompatível com score: " & score1.ToString, False, codDedo)
+                    insertlog(cartaoFormatado, DateTime.Now, "ERRO: 1a. Verificação incompatível com score: " & score1.ToString, False, codDedo, codPrestador)
 
                     'não passou na primeira, tentando 2a.
                     resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado2, score2, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
 
                     'Verificação com sucesso! Grava no log e retorna /ok
                     If (resultado = GrFingerXLib.GRConstants.GR_MATCH) Then
-                        insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso(2o. template), score: " & score2.ToString, True, codDedo)
+                        insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso(2o. template), score: " & score2.ToString, True, codDedo, codPrestador)
                         Return "/ok "
                     End If
 
                     'Impressão digital não reconhecida, verificar novamente com 3o. template
                     If (resultado = GrFingerXLib.GRConstants.GR_NOT_MATCH) Then
                         'Registrando no LOG que não foi possível verificação na 2a. tentativa
-                        insertlog(cartaoFormatado, DateTime.Now, "ERRO: 2a. Verificação incompatível com score: " & score2.ToString, False, codDedo)
+                        insertlog(cartaoFormatado, DateTime.Now, "ERRO: 2a. Verificação incompatível com score: " & score2.ToString, False, codDedo, codPrestador)
 
                         'não passou na segunda, tentando 3a. e última
                         resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado3, score3, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
 
                         'Verificação com sucesso! Grava no log e retorna /ok
                         If (resultado = GrFingerXLib.GRConstants.GR_MATCH) Then
-                            insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso (3o. template), score: " & score3.ToString, True, codDedo)
+                            insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso (3o. template), score: " & score3.ToString, True, codDedo, codPrestador)
                             Return "/ok "
                         End If
 
                         'Impressão digital não reconhecida na 3a. tentativa, grava no log e retorna /erro
                         If (resultado = GrFingerXLib.GRConstants.GR_NOT_MATCH) Then
-                            insertlog(cartaoFormatado, DateTime.Now, "Biometria Incompativel.(score1=" & score1.ToString & "),(score2=" & score2.ToString & "),(score3=" & score3.ToString & ")", False, codDedo)
+                            insertlog(cartaoFormatado, DateTime.Now, "Biometria Incompativel.(score1=" & score1.ToString & "),(score2=" & score2.ToString & "),(score3=" & score3.ToString & ")", False, codDedo, codPrestador)
                             Return "/erro Digital Incompativel."
                         End If
                     End If
@@ -356,45 +358,76 @@ Public Class Service1
                     Dim a As GrFingerXLib.GRConstants
                     a = resultado
                     'Grava no Log
-                    insertlog(cartaoFormatado, DateTime.Now, "Erro Desconhecido: " & a, False, codDedo)
+                    insertlog(cartaoFormatado, DateTime.Now, "Erro Desconhecido: " & a, False, codDedo, codPrestador)
                     Return "/erro Erro Desconhecido: " & a.ToString
                 End If
             End If
             Exit Function
         Catch ex As Exception
             'Grava no Log
-            insertlog(cartaoFormatado, DateTime.Now, "Erro ao Verificar Biometria: " & ex.Message, False, codDedo)
+            insertlog(cartaoFormatado, DateTime.Now, "Erro ao Verificar Biometria: " & ex.Message, False, codDedo, codPrestador)
             Return "/erro " & ex.Message
         End Try
 
         'Grava no Log
-        insertlog(cartaoFormatado, DateTime.Now, "Falha de Verificacao de Biometria.", False, codDedo)
+        insertlog(cartaoFormatado, DateTime.Now, "Falha de Verificacao de Biometria.", False, codDedo, codPrestador)
         Return "/erro Falha de Verificacao de Biometria."
     End Function
 
     <WebMethod()> _
- Public Function insertlog(ByVal codUsuario As String, ByVal dthr As Date, ByVal desc As String, ByVal verificOK As Boolean, ByVal dedo As Integer)
+    Public Function insertlog(ByVal codUsuario As String, ByVal dthr As Date, ByVal desc As String, ByVal verificOK As Boolean, ByVal dedo As Integer, ByVal codPrestador As String)
 
-        Try 'se caso os parametros forem inválidos, nulos
-            SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
+        'Try 'se caso os parametros forem inválidos, nulos
+        '    SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
+        '    Dim cartaoFormatado As String = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
+
+        '    'Grava mensagem de LOG no Banco de Dados
+        '    SqlDataAdapter2.InsertCommand.CommandText = "INSERT INTO BiometriaDPLogs(Codigo, DataHora, Descricao, VerificacaoOK, CodDedo, CodigoPrestador) VALUES (@Codigo, @DataHora, @Descricao, @VerificacaoOK, @CodDedo, @CodigoPrestador)"
+        '    SqlDataAdapter2.InsertCommand.Parameters("@Codigo").Value = cartaoFormatado
+        '    SqlDataAdapter2.InsertCommand.Parameters("@DataHora").Value = dthr
+        '    SqlDataAdapter2.InsertCommand.Parameters("@Descricao").Value = desc
+        '    SqlDataAdapter2.InsertCommand.Parameters("@VerificacaoOK").Value = verificOK
+        '    SqlDataAdapter2.InsertCommand.Parameters("@CodDedo").Value = dedo
+        '    SqlDataAdapter2.InsertCommand.Parameters("@CodigoPrestador").Value = codPrestador
+
+        '    SqlDataAdapter2.InsertCommand.Connection.Open()
+        '    SqlDataAdapter2.InsertCommand.ExecuteNonQuery()
+        '    SqlDataAdapter2.InsertCommand.Connection.Close()
+
+        'Catch ex As Exception
+        '    Return "/Parametros Invalidos" & ex.Message
+        'End Try
+
+        Try
+            Dim ComandoSQL As String
             Dim cartaoFormatado As String = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
 
-            'Grava mensagem de LOG no Banco de Dados
-            SqlDataAdapter2.InsertCommand.CommandText = "INSERT INTO BiometriaDPLogs(Codigo, DataHora, Descricao, VerificacaoOK, CodDedo) VALUES (@Codigo, @DataHora, @Descricao, @VerificacaoOK, @CodDedo)"
-            SqlDataAdapter2.InsertCommand.Parameters("@Codigo").Value = cartaoFormatado
-            SqlDataAdapter2.InsertCommand.Parameters("@DataHora").Value = dthr
-            SqlDataAdapter2.InsertCommand.Parameters("@Descricao").Value = desc
-            SqlDataAdapter2.InsertCommand.Parameters("@VerificacaoOK").Value = verificOK
-            SqlDataAdapter2.InsertCommand.Parameters("@CodDedo").Value = dedo
+            ComandoSQL = "INSERT INTO BiometriaDPLogs(Codigo, DataHora, Descricao, VerificacaoOK, CodDedo, CodigoPrestador) VALUES (@Codigo, @DataHora, @Descricao, @VerificacaoOK, @CodDedo, @CodigoPrestador)"
+            Dim myConnection As SqlConnection = New SqlConnection(Misc.GetDadoWebConfig("conexaoBiometria"))
+            Dim myCommand As SqlCommand = New SqlCommand(ComandoSQL, myConnection)
 
-            SqlDataAdapter2.InsertCommand.Connection.Open()
-            SqlDataAdapter2.InsertCommand.ExecuteNonQuery()
-            SqlDataAdapter2.InsertCommand.Connection.Close()
+            myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Codigo", System.Data.SqlDbType.VarChar, 50, "Codigo"))
+            myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@DataHora", System.Data.SqlDbType.DateTime, 8, "DataHora"))
+            myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Descricao", System.Data.SqlDbType.VarChar, 200, "Descricao"))
+            myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@VerificacaoOK", System.Data.SqlDbType.Int, 4, "VerificacaoOK"))
+            myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@CodDedo", System.Data.SqlDbType.Int, 4, "CodDedo"))
+            myCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@CodigoPrestador", System.Data.SqlDbType.VarChar, 100, "CodigoPrestador"))
 
+            myCommand.Parameters("@Codigo").Value = cartaoFormatado
+            myCommand.Parameters("@DataHora").Value = dthr
+            myCommand.Parameters("@Descricao").Value = desc
+            myCommand.Parameters("@VerificacaoOK").Value = verificOK
+            myCommand.Parameters("@CodDedo").Value = dedo
+            myCommand.Parameters("@CodigoPrestador").Value = codPrestador
+
+            myCommand.Connection.Open()
+            myCommand.ExecuteNonQuery()
+            myCommand.Connection.Close()
+
+            Return True
         Catch ex As Exception
             Return "/Parametros Invalidos" & ex.Message
         End Try
-
     End Function
 
 #Region " Funções usadas pela WebMethod CadastraFinger "
@@ -436,11 +469,11 @@ Public Class Service1
                 DataSetIdentify.DataBin.AddDataBinRow(NomeDoUsuario, SexoDoUsuario, DataDeNascimento, "", "", NomeDaMaeDoUsuario, CPF_DoUsuario, RG_DoUsuario, IdadeDoUsuario)
                 Return True
             Catch ex As Exception
-                insertlog(cartaoFormatado, DateTime.Now, "ERRO: Resposta do autorizador inválida, Erro=" & ex.Message, False, NumeroDoDedo)
+                insertlog(cartaoFormatado, DateTime.Now, "ERRO: Resposta do autorizador inválida, Erro=" & ex.Message, False, NumeroDoDedo, "")
                 Return False
             End Try
         Else
-            insertlog(cartaoFormatado, DateTime.Now, "ERRO: Resposta do autorizador está vazio", False, NumeroDoDedo)
+            insertlog(cartaoFormatado, DateTime.Now, "ERRO: Resposta do autorizador está vazio", False, NumeroDoDedo, "")
             Return False
         End If
     End Function
@@ -474,7 +507,7 @@ Public Class Service1
         Return (CarregaDatasetDoUsuario(codigoUsuario, DataSetIdentify))
     End Function
 
-    Function GravaTeplatesNoBanco(ByVal CodigoUsuario As String, ByVal TemplateBin1 As TTemplate, ByVal TemplateBin2 As TTemplate, ByVal TemplateBin3 As TTemplate) As Boolean
+    Function GravaTeplatesNoBanco(ByVal CodigoUsuario As String, ByVal TemplateBin1 As TTemplate, ByVal TemplateBin2 As TTemplate, ByVal TemplateBin3 As TTemplate, ByVal codPrestador As String) As Boolean
         'Atualizar dados, pq já existe o código gravado no banco
         Try
             Dim ComandoSQL As String
@@ -503,12 +536,12 @@ Public Class Service1
 
             Return True
         Catch ex As Exception
-            insertlog(CodigoUsuario, DateTime.Now, "ERRO ao gravar templates no Bando de Dados: " & ex.Message, False, NumeroDoDedo)
+            insertlog(CodigoUsuario, DateTime.Now, "ERRO ao gravar templates no Bando de Dados: " & ex.Message, False, NumeroDoDedo, codPrestador)
             Return False
         End Try
     End Function
 
-    Public Function GravaNovosTemplatesDoUsuarioNoBanco(ByVal CodigoUsuario As String, ByVal TemplateBin1 As TTemplate, ByVal TemplateBin2 As TTemplate, ByVal TemplateBin3 As TTemplate, ByVal dataSetIdentify As DSIdentify) As Boolean
+    Public Function GravaNovosTemplatesDoUsuarioNoBanco(ByVal CodigoUsuario As String, ByVal TemplateBin1 As TTemplate, ByVal TemplateBin2 As TTemplate, ByVal TemplateBin3 As TTemplate, ByVal dataSetIdentify As DSIdentify, ByVal codPrestador As String) As Boolean
         Try
             'Grava os templates no Banco de Dados
             SqlInsertCommand1.CommandText = "INSERT INTO BiometriaDP(Codigo, Dedo, DataBin, Template1, Template2, Template3) VALUES (@Codigo, @Dedo, @DataBin, @Template1, @Template2, @Template3)"
@@ -528,13 +561,13 @@ Public Class Service1
             SqlInsertCommand1.Connection.Close()
 
             If QtdeItens > 0 Then
-                insertlog(CodigoUsuario, DateTime.Now, "Biometria Cadastrada com Sucesso", True, NumeroDoDedo)
+                insertlog(CodigoUsuario, DateTime.Now, "Biometria Cadastrada com Sucesso", True, NumeroDoDedo, codPrestador)
                 Return True
             Else
                 Return False
             End If
         Catch ex As Exception
-            insertlog(CodigoUsuario, DateTime.Now, "ERRO ao gravar novo usuário no Bando de Dados: " & ex.Message, False, NumeroDoDedo)
+            insertlog(CodigoUsuario, DateTime.Now, "ERRO ao gravar novo usuário no Bando de Dados: " & ex.Message, False, NumeroDoDedo, codPrestador)
             Return False
         End Try
 
@@ -582,119 +615,119 @@ Public Class Service1
 
 #End Region
 
-                                '<WebMethod()> _ 
-                                ' Esta Function contém rotinas de validação usando drivers da Digital Persona
-                                'Public Function validaFinger(ByVal codUsuario As String, ByVal template As Byte(), ByVal Size As Integer, ByVal codDedo As Integer, ByVal cartaoFormatado As String) As String
-                                '    Try
-                                '        SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
-                                '        cartaoFormatado = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
+    '<WebMethod()> _ 
+    ' Esta Function contém rotinas de validação usando drivers da Digital Persona
+    'Public Function validaFinger(ByVal codUsuario As String, ByVal template As Byte(), ByVal Size As Integer, ByVal codDedo As Integer, ByVal cartaoFormatado As String) As String
+    '    Try
+    '        SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
+    '        cartaoFormatado = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
 
-                                '        '-----------------------------------------------------------
-                                '        ' template = Variavel string recebida como parâmetro
-                                '        '            Convertendo de StringB64 para byte array
-                                '        '            Depois de convertido, jogo numa variavel tipo Object
-                                '        '-----------------------------------------------------------
-                                '        'Dim templateBin As Byte() = System.Convert.FromBase64String(template)
-                                '        Dim templateBin As TTemplate
+    '        '-----------------------------------------------------------
+    '        ' template = Variavel string recebida como parâmetro
+    '        '            Convertendo de StringB64 para byte array
+    '        '            Depois de convertido, jogo numa variavel tipo Object
+    '        '-----------------------------------------------------------
+    '        'Dim templateBin As Byte() = System.Convert.FromBase64String(template)
+    '        Dim templateBin As TTemplate
 
-                                '        templateBin.tpt = template
-                                '        templateBin.Size = Size
+    '        templateBin.tpt = template
+    '        templateBin.Size = Size
 
-                                '        Dim templateVerify As System.Object = templateBin
+    '        Dim templateVerify As System.Object = templateBin
 
-                                '        '-----------------------------------------------------------
-                                '        ' Lendo template binario gravado no banco de dados
-                                '        '-----------------------------------------------------------
-                                '        Dim templateGravado As Byte()
+    '        '-----------------------------------------------------------
+    '        ' Lendo template binario gravado no banco de dados
+    '        '-----------------------------------------------------------
+    '        Dim templateGravado As Byte()
 
-                                '        '!!!###POR ARQUIVO###!!!
-                                '        'Dim fileName As String = "D:\Inetpub\wwwroot\wsIdentifyFinger\" + codUsuario + ".bin"
-                                '        'Dim oFs As System.IO.FileStream = New System.IO.FileStream(fileName, System.IO.FileMode.Open)
-                                '        'ReDim templateGravado(oFs.Length - 1)
-                                '        'oFs.Read(templateGravado, 0, oFs.Length)
-                                '        'oFs.Close()
+    '        '!!!###POR ARQUIVO###!!!
+    '        'Dim fileName As String = "D:\Inetpub\wwwroot\wsIdentifyFinger\" + codUsuario + ".bin"
+    '        'Dim oFs As System.IO.FileStream = New System.IO.FileStream(fileName, System.IO.FileMode.Open)
+    '        'ReDim templateGravado(oFs.Length - 1)
+    '        'oFs.Read(templateGravado, 0, oFs.Length)
+    '        'oFs.Close()
 
-                                '        '!!!###LENDO TEMPLATE DO BANCO###!!!
-                                '        SqlDataAdapter1.SelectCommand.CommandText = "SELECT * FROM BiometriaDP WHERE (Codigo like @Codigo) and (Dedo = @Dedo)"
+    '        '!!!###LENDO TEMPLATE DO BANCO###!!!
+    '        SqlDataAdapter1.SelectCommand.CommandText = "SELECT * FROM BiometriaDP WHERE (Codigo like @Codigo) and (Dedo = @Dedo)"
 
-                                '        SqlDataAdapter1.SelectCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Codigo", System.Data.SqlDbType.VarChar, 50, "Codigo"))
-                                '        SqlDataAdapter1.SelectCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Dedo", System.Data.SqlDbType.Int, 4, "Dedo"))
+    '        SqlDataAdapter1.SelectCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Codigo", System.Data.SqlDbType.VarChar, 50, "Codigo"))
+    '        SqlDataAdapter1.SelectCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Dedo", System.Data.SqlDbType.Int, 4, "Dedo"))
 
-                                '        SqlDataAdapter1.SelectCommand.Parameters("@Codigo").Value = cartaoFormatado.Substring(0, 15) & "%"
-                                '        SqlDataAdapter1.SelectCommand.Parameters("@Dedo").Value = codDedo
-                                '        SqlDataAdapter1.Fill(ds)
+    '        SqlDataAdapter1.SelectCommand.Parameters("@Codigo").Value = cartaoFormatado.Substring(0, 15) & "%"
+    '        SqlDataAdapter1.SelectCommand.Parameters("@Dedo").Value = codDedo
+    '        SqlDataAdapter1.Fill(ds)
 
-                                '        '!!!###SE VERIFICAR E NAO ESTIVER CADASTRADO, AVISAR PARA CADASTRAR###!!!
-                                '        '!!!###SE TEMPLATE FOR NULO, AVISAR PARA CADASTRAR###!!!
+    '        '!!!###SE VERIFICAR E NAO ESTIVER CADASTRADO, AVISAR PARA CADASTRAR###!!!
+    '        '!!!###SE TEMPLATE FOR NULO, AVISAR PARA CADASTRAR###!!!
 
-                                '        'verifica se esta vazio, nulo
-                                '        If ds.BiometriaDP(0).IsTemplate1Null = True Or ds.BiometriaDP(0).Template1 Is Nothing = True Then
-                                '            '!!!###GRAVANDO LOG###!!!
-                                '            insertlog(cartaoFormatado, DateTime.Now, "Biometria nao cadastrada", False, codDedo)
-                                '            Return "/erro Biometria nao Cadastrada"
-                                '        Else
+    '        'verifica se esta vazio, nulo
+    '        If ds.BiometriaDP(0).IsTemplate1Null = True Or ds.BiometriaDP(0).Template1 Is Nothing = True Then
+    '            '!!!###GRAVANDO LOG###!!!
+    '            insertlog(cartaoFormatado, DateTime.Now, "Biometria nao cadastrada", False, codDedo)
+    '            Return "/erro Biometria nao Cadastrada"
+    '        Else
 
-                                '            templateGravado = ds.BiometriaDP(0).Template1
-                                '            Dim templateRegistration As System.Object = templateGravado
+    '            templateGravado = ds.BiometriaDP(0).Template1
+    '            Dim templateRegistration As System.Object = templateGravado
 
-                                '            '-----------------------------------
-                                '            ' Validação
-                                '            '   * Declarando variáveis
-                                '            '-----------------------------------
+    '            '-----------------------------------
+    '            ' Validação
+    '            '   * Declarando variáveis
+    '            '-----------------------------------
 
-                                '            Dim verifyOK As Boolean = False
-                                '            Dim score As Object = 0
-                                '            Dim theshold As Object = 0
-                                '            Dim tture As Boolean = True
+    '            Dim verifyOK As Boolean = False
+    '            Dim score As Object = 0
+    '            Dim theshold As Object = 0
+    '            Dim tture As Boolean = True
 
-                                '            Dim SecureMode As DpSdkEngLib.AISecureModeMask = New DpSdkEngLib.AISecureModeMask
-                                '            Dim VerifClass As DpSdkEngLib.FPVerifyClass = New DpSdkEngLib.FPVerifyClass
+    '            Dim SecureMode As DpSdkEngLib.AISecureModeMask = New DpSdkEngLib.AISecureModeMask
+    '            Dim VerifClass As DpSdkEngLib.FPVerifyClass = New DpSdkEngLib.FPVerifyClass
 
-                                '            '-----------------------------------
-                                '            ' Validação
-                                '            '   * Carregando template recebido no parametro
-                                '            '-----------------------------------
+    '            '-----------------------------------
+    '            ' Validação
+    '            '   * Carregando template recebido no parametro
+    '            '-----------------------------------
 
-                                '            Dim VerifyTemplate As DpSdkEngLib.FPTemplate = New DpSdkEngLib.FPTemplate
-                                '            VerifyTemplate.Import(templateVerify)
+    '            Dim VerifyTemplate As DpSdkEngLib.FPTemplate = New DpSdkEngLib.FPTemplate
+    '            VerifyTemplate.Import(templateVerify)
 
-                                '            '-----------------------------------
-                                '            ' Validação
-                                '            '   * Carregando template gravado no banco
-                                '            '-----------------------------------
+    '            '-----------------------------------
+    '            ' Validação
+    '            '   * Carregando template gravado no banco
+    '            '-----------------------------------
 
-                                '            Dim RegTemplate As DpSdkEngLib.FPTemplateClass = New DpSdkEngLib.FPTemplateClass
-                                '            System.Threading.Thread.CurrentThread.Sleep(1000)
-                                '            RegTemplate.Import(templateRegistration)
+    '            Dim RegTemplate As DpSdkEngLib.FPTemplateClass = New DpSdkEngLib.FPTemplateClass
+    '            System.Threading.Thread.CurrentThread.Sleep(1000)
+    '            RegTemplate.Import(templateRegistration)
 
-                                '            '-----------------------------------
-                                '            ' Validação
-                                '            '   * Comparando templates
-                                '            '-----------------------------------
+    '            '-----------------------------------
+    '            ' Validação
+    '            '   * Comparando templates
+    '            '-----------------------------------
 
-                                '            VerifClass.Compare(RegTemplate, VerifyTemplate, verifyOK, score, theshold, tture, SecureMode)
+    '            VerifClass.Compare(RegTemplate, VerifyTemplate, verifyOK, score, theshold, tture, SecureMode)
 
-                                '            If (verifyOK = True) Then
-                                '                '!!!###GRAVANDO LOG###!!!
-                                '                insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso", True, codDedo)
-                                '                Return "/ok"
-                                '            Else
-                                '                '!!!###GRAVANDO LOG###!!!
-                                '                insertlog(cartaoFormatado, DateTime.Now, "Biometria Incompativel", False, codDedo)
-                                '                Return "/erro Digital Incompativel."
-                                '            End If
-                                '        End If
+    '            If (verifyOK = True) Then
+    '                '!!!###GRAVANDO LOG###!!!
+    '                insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso", True, codDedo)
+    '                Return "/ok"
+    '            Else
+    '                '!!!###GRAVANDO LOG###!!!
+    '                insertlog(cartaoFormatado, DateTime.Now, "Biometria Incompativel", False, codDedo)
+    '                Return "/erro Digital Incompativel."
+    '            End If
+    '        End If
 
-                                '        Exit Function
-                                '    Catch ex As Exception
-                                '        '!!!###GRAVANDO LOG###!!!
-                                '        insertlog(cartaoFormatado, DateTime.Now, "Erro ao Verificar Biometria", False, codDedo)
-                                '        Return "/erro " & ex.Message
+    '        Exit Function
+    '    Catch ex As Exception
+    '        '!!!###GRAVANDO LOG###!!!
+    '        insertlog(cartaoFormatado, DateTime.Now, "Erro ao Verificar Biometria", False, codDedo)
+    '        Return "/erro " & ex.Message
 
-                                '    End Try
-                                '    '!!!###GRAVANDO LOG###!!!
-                                '    insertlog(cartaoFormatado, DateTime.Now, "Erro ao Verificar Biometria", False, codDedo)
-                                '    Return "/erro Falha de Verificacao de Biometria"
+    '    End Try
+    '    '!!!###GRAVANDO LOG###!!!
+    '    insertlog(cartaoFormatado, DateTime.Now, "Erro ao Verificar Biometria", False, codDedo)
+    '    Return "/erro Falha de Verificacao de Biometria"
 
-                                'End Function
+    'End Function
 End Class
