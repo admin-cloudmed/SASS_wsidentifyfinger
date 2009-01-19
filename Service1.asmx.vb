@@ -359,7 +359,8 @@ Public Class Service1
                     a = resultado
                     'Grava no Log
                     insertlog(cartaoFormatado, DateTime.Now, "Erro Desconhecido: " & a, False, codDedo, codPrestador)
-                    Return "/erro Erro Desconhecido: " & a.ToString
+                    'Return "/erro Erro Desconhecido: " & a.ToString
+                    Return "/erro Digital nao Capturada com Sucesso. Detalhes do erro: " & a.ToString
                 End If
             End If
             Exit Function
