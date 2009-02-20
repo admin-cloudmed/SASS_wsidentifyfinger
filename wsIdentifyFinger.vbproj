@@ -132,6 +132,25 @@
                     BuildAction = "Compile"
                 />
                 <File
+                    RelPath = "dsDadosUsuario.xsd"
+                    BuildAction = "Content"
+                    Generator = "MSDataSetGenerator"
+                    LastGenOutput = "dsDadosUsuario.vb"
+                />
+                <File
+                    RelPath = "dsDadosUsuario.vb"
+                    DependentUpon = "dsDadosUsuario.xsd"
+                    SubType = "code"
+                    BuildAction = "Compile"
+                    DesignTime = "True"
+                    AutoGen = "True"
+                />
+                <File
+                    RelPath = "dsDadosUsuario.xsx"
+                    DependentUpon = "dsDadosUsuario.xsd"
+                    BuildAction = "None"
+                />
+                <File
                     RelPath = "dsidentify.xsd"
                     BuildAction = "Content"
                     Generator = "MSDataSetGenerator"

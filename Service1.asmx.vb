@@ -201,6 +201,7 @@ Public Class Service1
             Dim DataSetIdentify As New DSIdentify
 
             cartaoFormatado = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
+
             UsuarioJaExiste = VerificaSeUsuarioExiste(cartaoFormatado)
 
             If (UsuarioJaExiste) Then
@@ -210,6 +211,7 @@ Public Class Service1
                 '''Consulta dados do usuário no autorizador da Dual
                 LeDadosDoUsuarioNoAutorizador(cartaoFormatado, DataSetIdentify)
             End If
+
 
             If (UsuarioJaExiste) Then
                 If (DataSetIdentify.BiometriaDP(0).IsTemplate1Null) = True Then 'Existe o registro, mas ainda não existe a biometria cadastrada
@@ -245,6 +247,7 @@ Public Class Service1
     Public Function validaFinger(ByVal codUsuario As String, ByVal template As Byte(), ByVal codDedo As Integer, ByVal cartaoFormatado As String, ByVal codPrestador As String) As String
         Try
             SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
+
             cartaoFormatado = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
 
             Dim templateBin_recebido As New TTemplate
@@ -268,7 +271,12 @@ Public Class Service1
             SqlDataAdapter1.SelectCommand.Parameters.Add _
                (New System.Data.SqlClient.SqlParameter("@Dedo", System.Data.SqlDbType.Int, 4, "Dedo"))
 
-            SqlDataAdapter1.SelectCommand.Parameters("@Codigo").Value = cartaoFormatado.Substring(0, 15) & "%"
+            If Misc.GetDadoWebConfig("layout") <> "stacasasauderiopreto" Then
+                SqlDataAdapter1.SelectCommand.Parameters("@Codigo").Value = cartaoFormatado.Substring(0, 15) & "%"
+            Else
+                SqlDataAdapter1.SelectCommand.Parameters("@Codigo").Value = cartaoFormatado & "%"
+            End If
+
             SqlDataAdapter1.SelectCommand.Parameters("@Dedo").Value = codDedo
             SqlDataAdapter1.Fill(DS)
 
@@ -359,7 +367,6 @@ Public Class Service1
                     a = resultado
                     'Grava no Log
                     insertlog(cartaoFormatado, DateTime.Now, "Erro Desconhecido: " & a, False, codDedo, codPrestador)
-                    'Return "/erro Erro Desconhecido: " & a.ToString
                     Return "/erro Digital nao Capturada com Sucesso. Detalhes do erro: " & a.ToString
                 End If
             End If
@@ -442,33 +449,73 @@ Public Class Service1
     Function LeDadosDoUsuarioNoAutorizador(ByVal cartaoFormatado As String, ByRef DataSetIdentify As DSIdentify) As Boolean
         Dim WEBService As New WebReference.Autorizador : WEBService.Url = Misc.GetDadoWebConfig("UrlWebService")
         Dim NomeDoUsuario, DataDeNascimento, SexoDoUsuario, NomeDaMaeDoUsuario, CPF_DoUsuario, RG_DoUsuario As String
+        Dim dtNascimento As Date
         Dim IdadeDoUsuario As Integer
+        Dim Dados_do_Usuario As String
+        Dim dsDados As New dsDadosUsuario
 
-        'string com os dados do web service (usuário)
-        'Exemplo: => Dim Dados_do_Usuario As String = "/PES,""JEAN PAULO ORLANDO SILVA"",""04/12/1978"","""",""M"""
-        Dim Dados_do_Usuario As String = WEBService.Autoriza(9, cartaoFormatado.Remove(cartaoFormatado.Length - 1, 1).PadLeft(16, "0"), 0, 0, 0, 0, 0, "", "", "", "", Misc.GetDadoWebConfig("Prototipo"))
+        '***** Dados do Usuário HB: *****
+
+        'PES,\"LEANDRO MATEUS ARAUJO MEDINA\",\"10/05/1979\",\"M\",
+        '\"SOLANGE ARAUJO MEDINA\",\"28225242890\",\"333068142\"\n"
+
+
+
+        '***** Dados do Usuário Santa Casa: *****
+
+        '"<dsDadosUsuario xmlns=\"http://tempuri.org/dsDadosUsuario.xsd\">\n  <DadosUsuario>\n    <Nome>EMERSON DA         'SILVA MOREIRA</Nome>\n    <DataNasc>17/8/1973 00:00:00</DataNasc>\n    <Sexo>Masculino</Sexo>\n            '<CPF>VILMA RODRIGUES DO CARMO</CPF>\n    <RG>2016560-4</RG>\n  </DadosUsuario>\n</dsDadosUsuario>"
+
+
+        '''Para Santa Casa o cartão deve ir com 17 dígitos
+        If Misc.GetDadoWebConfig("layout") = "uninet" Then
+            Dados_do_Usuario = WEBService.Autoriza(9, cartaoFormatado.Remove(cartaoFormatado.Length - 1, 1).PadLeft(16, "0"), 0, 0, 0, 0, 0, "", "", "", "", Misc.GetDadoWebConfig("Prototipo"))
+        ElseIf Misc.GetDadoWebConfig("layout") = "stacasasauderiopreto" Then
+            Dados_do_Usuario = WEBService.Autoriza(9, cartaoFormatado, 0, 0, 0, 0, 0, "", "", "", "", Misc.GetDadoWebConfig("Prototipo"))
+        End If
 
         DataSetIdentify.Clear()
 
         If (Dados_do_Usuario.Trim <> "") Then
             Try
-                'separar (split) os campos separados c/ vírgula que chegam do layout
-                NomeDoUsuario = Dados_do_Usuario.Split(",")(1).Replace("""", "")
-                DataDeNascimento = Dados_do_Usuario.Split(",")(2).Replace("""", "")
-                SexoDoUsuario = Dados_do_Usuario.Split(",")(3).Replace("""", "")
-                NomeDaMaeDoUsuario = Dados_do_Usuario.Split(",")(4).Replace("""", "")
-                CPF_DoUsuario = Dados_do_Usuario.Split(",")(5).Replace("""", "")
-                RG_DoUsuario = Dados_do_Usuario.Split(",")(6).Replace("""", "")
+                If Misc.GetDadoWebConfig("layout") = "uninet" Then
+                    '''Separar (split) os campos separados c/ vírgula que chegam do layout --> HB
+                    NomeDoUsuario = Dados_do_Usuario.Split(",")(1).Replace("""", "")
+                    DataDeNascimento = Dados_do_Usuario.Split(",")(2).Replace("""", "")
+                    SexoDoUsuario = Dados_do_Usuario.Split(",")(3).Replace("""", "")
+                    NomeDaMaeDoUsuario = Dados_do_Usuario.Split(",")(4).Replace("""", "")
+                    CPF_DoUsuario = Dados_do_Usuario.Split(",")(5).Replace("""", "")
+                    RG_DoUsuario = Dados_do_Usuario.Split(",")(6).Replace("""", "")
 
-                RG_DoUsuario = RG_DoUsuario.Replace(Chr(13) & Chr(10), "")
-                RG_DoUsuario = RG_DoUsuario.Replace(Chr(13), "")
-                RG_DoUsuario = RG_DoUsuario.Replace(Chr(10), "")
+                    RG_DoUsuario = RG_DoUsuario.Replace(Chr(13) & Chr(10), "")
+                    RG_DoUsuario = RG_DoUsuario.Replace(Chr(13), "")
+                    RG_DoUsuario = RG_DoUsuario.Replace(Chr(10), "")
 
-                IdadeDoUsuario = getIdade(CDate(DataDeNascimento))
+                ElseIf Misc.GetDadoWebConfig("layout") = "stacasasauderiopreto" Then
+                    '''Santa Casa os dados vem em XML
+                    Misc.LoadXML(dsDados, Dados_do_Usuario)
+                    NomeDoUsuario = dsDados.DadosUsuario(0).Nome
+                    dtNascimento = dsDados.DadosUsuario(0).DataNasc
+                    SexoDoUsuario = dsDados.DadosUsuario(0).Sexo
+                    NomeDaMaeDoUsuario = dsDados.DadosUsuario(0).NomeMae
+                    CPF_DoUsuario = dsDados.DadosUsuario(0).CPF
+                    RG_DoUsuario = dsDados.DadosUsuario(0).RG
+
+                    RG_DoUsuario = RG_DoUsuario.Replace(Chr(13) & Chr(10), "")
+                    RG_DoUsuario = RG_DoUsuario.Replace(Chr(13), "")
+                    RG_DoUsuario = RG_DoUsuario.Replace(Chr(10), "")
+                End If
 
                 'Adicionando no dataset a linha databin passando os parametros que chegaram do layout
-                DataSetIdentify.DataBin.AddDataBinRow(NomeDoUsuario, SexoDoUsuario, DataDeNascimento, "", "", NomeDaMaeDoUsuario, CPF_DoUsuario, RG_DoUsuario, IdadeDoUsuario)
+                If Misc.GetDadoWebConfig("layout") <> "stacasasauderiopreto" Then
+                    IdadeDoUsuario = getIdade(CDate(DataDeNascimento))
+                    DataSetIdentify.DataBin.AddDataBinRow(NomeDoUsuario, SexoDoUsuario, DataDeNascimento, "", "", NomeDaMaeDoUsuario, CPF_DoUsuario, RG_DoUsuario, IdadeDoUsuario)
+                Else
+                    IdadeDoUsuario = getIdade(dtNascimento)
+                    DataSetIdentify.DataBin.AddDataBinRow(NomeDoUsuario, SexoDoUsuario, dtNascimento, "", "", NomeDaMaeDoUsuario, CPF_DoUsuario, RG_DoUsuario, IdadeDoUsuario)
+                End If
+
                 Return True
+
             Catch ex As Exception
                 insertlog(cartaoFormatado, DateTime.Now, "ERRO: Resposta do autorizador inválida, Erro=" & ex.Message, False, NumeroDoDedo, "")
                 Return False
@@ -487,9 +534,15 @@ Public Class Service1
             SqlDataAdapter1.SelectCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Codigo", System.Data.SqlDbType.VarChar, 50, "Codigo"))
             SqlDataAdapter1.SelectCommand.Parameters.Add(New System.Data.SqlClient.SqlParameter("@Dedo", System.Data.SqlDbType.Int, 4, "Dedo"))
 
-            SqlDataAdapter1.SelectCommand.Parameters("@Codigo").Value = codigoUsuario.Substring(0, 15) & "%"
+            If Misc.GetDadoWebConfig("layout") <> "stacasasauderiopreto" Then
+                SqlDataAdapter1.SelectCommand.Parameters("@Codigo").Value = codigoUsuario.Substring(0, 15) & "%"
+            Else
+                SqlDataAdapter1.SelectCommand.Parameters("@Codigo").Value = codigoUsuario & "%"
+            End If
+
             SqlDataAdapter1.SelectCommand.Parameters("@Dedo").Value = NumeroDoDedo
             SqlDataAdapter1.Fill(ds)
+
             Return True
         Catch
             Return False
