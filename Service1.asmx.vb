@@ -322,35 +322,38 @@ Public Class Service1
 
                 'Verificação com sucesso! Grava no log e retorna /ok
                 If (resultado = GrFingerXLib.GRConstants.GR_MATCH) Then
-                    insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso(1o. template), score: " & score1.ToString, True, codDedo, codPrestador)
+                    'insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso(1o. template), score: " & score1.ToString, True, codDedo, codPrestador)
+                    insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso", True, codDedo, codPrestador)
                     Return "/ok "
                 End If
 
                 'Impressão digital não reconhecida, verificar novamente com 2o. template
                 If (resultado = GrFingerXLib.GRConstants.GR_NOT_MATCH) Then
                     'Registrando no LOG que não foi possível verificação na 1a. tentativa
-                    insertlog(cartaoFormatado, DateTime.Now, "ERRO: 1a. Verificação incompatível com score: " & score1.ToString, False, codDedo, codPrestador)
+                    'insertlog(cartaoFormatado, DateTime.Now, "ERRO: 1a. Verificação incompatível com score: " & score1.ToString, False, codDedo, codPrestador)
 
                     'não passou na primeira, tentando 2a.
                     resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado2, score2, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
 
                     'Verificação com sucesso! Grava no log e retorna /ok
                     If (resultado = GrFingerXLib.GRConstants.GR_MATCH) Then
-                        insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso(2o. template), score: " & score2.ToString, True, codDedo, codPrestador)
+                        'insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso(2o. template), score: " & score2.ToString, True, codDedo, codPrestador)
+                        insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso", True, codDedo, codPrestador)
                         Return "/ok "
                     End If
 
                     'Impressão digital não reconhecida, verificar novamente com 3o. template
                     If (resultado = GrFingerXLib.GRConstants.GR_NOT_MATCH) Then
                         'Registrando no LOG que não foi possível verificação na 2a. tentativa
-                        insertlog(cartaoFormatado, DateTime.Now, "ERRO: 2a. Verificação incompatível com score: " & score2.ToString, False, codDedo, codPrestador)
+                        'insertlog(cartaoFormatado, DateTime.Now, "ERRO: 2a. Verificação incompatível com score: " & score2.ToString, False, codDedo, codPrestador)
 
                         'não passou na segunda, tentando 3a. e última
                         resultado = GrFinger.Verify(templateBin_recebido.tpt, templateGravado3, score3, GrFingerXLib.GRConstants.GR_DEFAULT_CONTEXT)
 
                         'Verificação com sucesso! Grava no log e retorna /ok
                         If (resultado = GrFingerXLib.GRConstants.GR_MATCH) Then
-                            insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso (3o. template), score: " & score3.ToString, True, codDedo, codPrestador)
+                            'insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso (3o. template), score: " & score3.ToString, True, codDedo, codPrestador)
+                            insertlog(cartaoFormatado, DateTime.Now, "Biometria Verificada com Sucesso", True, codDedo, codPrestador)
                             Return "/ok "
                         End If
 
@@ -384,28 +387,6 @@ Public Class Service1
 
     <WebMethod()> _
     Public Function insertlog(ByVal codUsuario As String, ByVal dthr As Date, ByVal desc As String, ByVal verificOK As Boolean, ByVal dedo As Integer, ByVal codPrestador As String)
-
-        'Try 'se caso os parametros forem inválidos, nulos
-        '    SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
-        '    Dim cartaoFormatado As String = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
-
-        '    'Grava mensagem de LOG no Banco de Dados
-        '    SqlDataAdapter2.InsertCommand.CommandText = "INSERT INTO BiometriaDPLogs(Codigo, DataHora, Descricao, VerificacaoOK, CodDedo, CodigoPrestador) VALUES (@Codigo, @DataHora, @Descricao, @VerificacaoOK, @CodDedo, @CodigoPrestador)"
-        '    SqlDataAdapter2.InsertCommand.Parameters("@Codigo").Value = cartaoFormatado
-        '    SqlDataAdapter2.InsertCommand.Parameters("@DataHora").Value = dthr
-        '    SqlDataAdapter2.InsertCommand.Parameters("@Descricao").Value = desc
-        '    SqlDataAdapter2.InsertCommand.Parameters("@VerificacaoOK").Value = verificOK
-        '    SqlDataAdapter2.InsertCommand.Parameters("@CodDedo").Value = dedo
-        '    SqlDataAdapter2.InsertCommand.Parameters("@CodigoPrestador").Value = codPrestador
-
-        '    SqlDataAdapter2.InsertCommand.Connection.Open()
-        '    SqlDataAdapter2.InsertCommand.ExecuteNonQuery()
-        '    SqlDataAdapter2.InsertCommand.Connection.Close()
-
-        'Catch ex As Exception
-        '    Return "/Parametros Invalidos" & ex.Message
-        'End Try
-
         Try
             Dim ComandoSQL As String
             Dim cartaoFormatado As String = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
@@ -521,7 +502,7 @@ Public Class Service1
                 Return False
             End Try
         Else
-            insertlog(cartaoFormatado, DateTime.Now, "ERRO: Resposta do autorizador está vazio", False, NumeroDoDedo, "")
+            insertlog(cartaoFormatado, DateTime.Now, "ERRO: Resposta do autorizador está vazia", False, NumeroDoDedo, "")
             Return False
         End If
     End Function
@@ -624,7 +605,6 @@ Public Class Service1
             insertlog(CodigoUsuario, DateTime.Now, "ERRO ao gravar novo usuário no Bando de Dados: " & ex.Message, False, NumeroDoDedo, codPrestador)
             Return False
         End Try
-
     End Function
 
     Function getIdade(ByVal DataNascimento As Date) As Integer
