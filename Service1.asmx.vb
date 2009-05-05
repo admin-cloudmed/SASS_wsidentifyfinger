@@ -1,6 +1,8 @@
 Imports System.Web.Services
 Imports Registro
 Imports System.Data.SqlClient
+Imports System.Globalization
+Imports System.Threading
 
 <System.Web.Services.WebService(Namespace := "http://tempuri.org/wsIdentifyFinger/Service1")> _
 Public Class Service1
@@ -188,7 +190,11 @@ Public Class Service1
 
     <WebMethod()> _
     Public Function CadastraFinger(ByVal codUsuario As String, ByVal template1 As Byte(), ByVal template2 As Byte(), ByVal template3 As Byte(), ByVal codDedo As Integer, ByVal cartaoFormatado As String, ByVal codPrestador As String) As String
+        Dim stringErroDebug As String
         Try
+            'gravaLogTXT("Entrou na rotina de cadastra finger.")
+            stringErroDebug = "Entrou na rotina de cadastra finger."
+
             SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
 
             NumeroDoDedo = codDedo
@@ -203,6 +209,8 @@ Public Class Service1
             cartaoFormatado = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
 
             UsuarioJaExiste = VerificaSeUsuarioExiste(cartaoFormatado)
+            'gravaLogTXT("Usuario ja existe: " & UsuarioJaExiste)
+            stringErroDebug = "Usuario ja existe: " & UsuarioJaExiste
 
             If (UsuarioJaExiste) Then
                 '''Consulta dados do usuário no banco de dados (xml)
@@ -212,8 +220,10 @@ Public Class Service1
                 LeDadosDoUsuarioNoAutorizador(cartaoFormatado, DataSetIdentify)
             End If
 
-
             If (UsuarioJaExiste) Then
+                'gravaLogTXT("Usuario ja existe")
+                stringErroDebug = "Usuario ja existe"
+
                 If (DataSetIdentify.BiometriaDP(0).IsTemplate1Null) = True Then 'Existe o registro, mas ainda não existe a biometria cadastrada
                     If (GravaTeplatesNoBanco(cartaoFormatado, templateBin1, templateBin2, templateBin3, codPrestador)) Then
                         insertlog(cartaoFormatado, DateTime.Now, "Impressão Digital Cadastrada com Sucesso.", True, codDedo, codPrestador)
@@ -237,15 +247,19 @@ Public Class Service1
             End If
 
         Catch ex As Exception
+            stringErroDebug = "Erro na rotina de cadastro da digital: " & ex.Message
+            gravaLogTXT(stringErroDebug)
             insertlog(cartaoFormatado, DateTime.Now, "Erro: " & ex.Message, False, codDedo, codPrestador)
             Return "/erro Comunique erro " & ex.Message
         End Try
 
+        gravaLogTXT(stringErroDebug)
     End Function
 
     <WebMethod()> _
     Public Function validaFinger(ByVal codUsuario As String, ByVal template As Byte(), ByVal codDedo As Integer, ByVal cartaoFormatado As String, ByVal codPrestador As String) As String
         Try
+            Registro.Misc.StringToFile("Entrou na rotina de valida finger.", "D:\inetpub\wwwroot\wsidentifyfinger\teste.txt")
             SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
 
             cartaoFormatado = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)
@@ -374,6 +388,7 @@ Public Class Service1
                 End If
             End If
             Exit Function
+
         Catch ex As Exception
             'Grava no Log
             insertlog(cartaoFormatado, DateTime.Now, "Erro ao Verificar Biometria: " & ex.Message, False, codDedo, codPrestador)
@@ -419,6 +434,10 @@ Public Class Service1
         End Try
     End Function
 
+    Public Sub gravaLogTXT(ByVal mensagem As String)
+        Registro.Misc.StringToFile(mensagem, "D:\inetpub\wwwroot\wsidentifyfinger\teste.txt")
+    End Sub
+
 #Region " Funções usadas pela WebMethod CadastraFinger "
 
     'LeDadosDoUsuarioNoAutorizador
@@ -428,18 +447,20 @@ Public Class Service1
     'formato XML (XMLBIN)
 
     Function LeDadosDoUsuarioNoAutorizador(ByVal cartaoFormatado As String, ByRef DataSetIdentify As DSIdentify) As Boolean
+        Thread.CurrentThread.CurrentCulture = New CultureInfo("pt-BR")
+
         Dim WEBService As New WebReference.Autorizador : WEBService.Url = Misc.GetDadoWebConfig("UrlWebService")
         Dim NomeDoUsuario, DataDeNascimento, SexoDoUsuario, NomeDaMaeDoUsuario, CPF_DoUsuario, RG_DoUsuario As String
         Dim dtNascimento As Date
         Dim IdadeDoUsuario As Integer
         Dim Dados_do_Usuario As String
         Dim dsDados As New dsDadosUsuario
+        Dim stringErroDebug As String
 
         '***** Dados do Usuário HB: *****
 
         'PES,\"LEANDRO MATEUS ARAUJO MEDINA\",\"10/05/1979\",\"M\",
         '\"SOLANGE ARAUJO MEDINA\",\"28225242890\",\"333068142\"\n"
-
 
 
         '***** Dados do Usuário Santa Casa: *****
@@ -454,10 +475,14 @@ Public Class Service1
             Dados_do_Usuario = WEBService.Autoriza(9, cartaoFormatado, 0, 0, 0, 0, 0, "", "", "", "", Misc.GetDadoWebConfig("Prototipo"))
         End If
 
+        'gravaLogTXT("Dados retornados do autorizador: " & Dados_do_Usuario)
+        stringErroDebug = "Dados retornados do autorizador: " & Dados_do_Usuario
+
         DataSetIdentify.Clear()
 
         If (Dados_do_Usuario.Trim <> "") Then
             Try
+                Dim culture As New CultureInfo("pt-BR")
                 If Misc.GetDadoWebConfig("layout") = "uninet" Then
                     '''Separar (split) os campos separados c/ vírgula que chegam do layout --> HB
                     NomeDoUsuario = Dados_do_Usuario.Split(",")(1).Replace("""", "")
@@ -475,7 +500,7 @@ Public Class Service1
                     '''Santa Casa os dados vem em XML
                     Misc.LoadXML(dsDados, Dados_do_Usuario)
                     NomeDoUsuario = dsDados.DadosUsuario(0).Nome
-                    dtNascimento = dsDados.DadosUsuario(0).DataNasc
+                    dtNascimento = Convert.ToDateTime(dsDados.DadosUsuario(0).DataNasc, culture)
                     SexoDoUsuario = dsDados.DadosUsuario(0).Sexo
                     NomeDaMaeDoUsuario = dsDados.DadosUsuario(0).NomeMae
                     CPF_DoUsuario = dsDados.DadosUsuario(0).CPF
@@ -488,8 +513,11 @@ Public Class Service1
 
                 'Adicionando no dataset a linha databin passando os parametros que chegaram do layout
                 If Misc.GetDadoWebConfig("layout") <> "stacasasauderiopreto" Then
-                    IdadeDoUsuario = getIdade(CDate(DataDeNascimento))
-                    DataSetIdentify.DataBin.AddDataBinRow(NomeDoUsuario, SexoDoUsuario, DataDeNascimento, "", "", NomeDaMaeDoUsuario, CPF_DoUsuario, RG_DoUsuario, IdadeDoUsuario)
+                    Dim DataNascimentoTeste As DateTime
+                    DataNascimentoTeste = Convert.ToDateTime(DataDeNascimento, culture)
+
+                    IdadeDoUsuario = getIdade(DataNascimentoTeste)
+                    DataSetIdentify.DataBin.AddDataBinRow(NomeDoUsuario, SexoDoUsuario, DataNascimentoTeste, "", "", NomeDaMaeDoUsuario, CPF_DoUsuario, RG_DoUsuario, IdadeDoUsuario)
                 Else
                     IdadeDoUsuario = getIdade(dtNascimento)
                     DataSetIdentify.DataBin.AddDataBinRow(NomeDoUsuario, SexoDoUsuario, dtNascimento, "", "", NomeDaMaeDoUsuario, CPF_DoUsuario, RG_DoUsuario, IdadeDoUsuario)
@@ -498,6 +526,8 @@ Public Class Service1
                 Return True
 
             Catch ex As Exception
+                stringErroDebug = "Erro ao ler dados do usuário no autorizador: " & ex.Message
+                gravaLogTXT(stringErroDebug)
                 insertlog(cartaoFormatado, DateTime.Now, "ERRO: Resposta do autorizador inválida, Erro=" & ex.Message, False, NumeroDoDedo, "")
                 Return False
             End Try
@@ -505,6 +535,7 @@ Public Class Service1
             insertlog(cartaoFormatado, DateTime.Now, "ERRO: Resposta do autorizador está vazia", False, NumeroDoDedo, "")
             Return False
         End If
+        gravaLogTXT(stringErroDebug)
     End Function
 
     Function CarregaDatasetDoUsuario(ByVal codigoUsuario As String, ByRef ds As DSIdentify) As Boolean
@@ -544,6 +575,8 @@ Public Class Service1
 
     Function GravaTeplatesNoBanco(ByVal CodigoUsuario As String, ByVal TemplateBin1 As TTemplate, ByVal TemplateBin2 As TTemplate, ByVal TemplateBin3 As TTemplate, ByVal codPrestador As String) As Boolean
         'Atualizar dados, pq já existe o código gravado no banco
+        Dim stringErroDebug As String
+
         Try
             Dim ComandoSQL As String
             ComandoSQL = "UPDATE BiometriaDP set Template1 = @Template1, Template2 = @Template2, Template3 = @Template3 WHERE (Codigo = @Codigo) and (Dedo = @Dedo)"
@@ -566,17 +599,23 @@ Public Class Service1
             myCommand.Connection.Open()
             QtdeItens = myCommand.ExecuteNonQuery()
             myCommand.Connection.Close()
+            stringErroDebug = "Atualizar templates: " & QtdeItens
 
             If QtdeItens = 0 Then Return False
 
             Return True
         Catch ex As Exception
+            stringErroDebug = "Erro em atualizar templates: " & ex.Message
+            gravaLogTXT(stringErroDebug)
             insertlog(CodigoUsuario, DateTime.Now, "ERRO ao gravar templates no Bando de Dados: " & ex.Message, False, NumeroDoDedo, codPrestador)
             Return False
         End Try
+        gravaLogTXT(stringErroDebug)
     End Function
 
     Public Function GravaNovosTemplatesDoUsuarioNoBanco(ByVal CodigoUsuario As String, ByVal TemplateBin1 As TTemplate, ByVal TemplateBin2 As TTemplate, ByVal TemplateBin3 As TTemplate, ByVal dataSetIdentify As DSIdentify, ByVal codPrestador As String) As Boolean
+        Dim stringErroDebug As String
+
         Try
             'Grava os templates no Banco de Dados
             SqlInsertCommand1.CommandText = "INSERT INTO BiometriaDP(Codigo, Dedo, DataBin, Template1, Template2, Template3) VALUES (@Codigo, @Dedo, @DataBin, @Template1, @Template2, @Template3)"
@@ -595,6 +634,8 @@ Public Class Service1
             QtdeItens = SqlInsertCommand1.ExecuteNonQuery()
             SqlInsertCommand1.Connection.Close()
 
+            stringErroDebug = "Gravou templates: " & QtdeItens
+
             If QtdeItens > 0 Then
                 insertlog(CodigoUsuario, DateTime.Now, "Biometria Cadastrada com Sucesso", True, NumeroDoDedo, codPrestador)
                 Return True
@@ -602,9 +643,12 @@ Public Class Service1
                 Return False
             End If
         Catch ex As Exception
+            stringErroDebug = "ERRO ao gravar novo usuário no Bando de Dados: " & ex.Message
+            gravaLogTXT(stringErroDebug)
             insertlog(CodigoUsuario, DateTime.Now, "ERRO ao gravar novo usuário no Bando de Dados: " & ex.Message, False, NumeroDoDedo, codPrestador)
             Return False
         End Try
+        gravaLogTXT(stringErroDebug)
     End Function
 
     Function getIdade(ByVal DataNascimento As Date) As Integer
