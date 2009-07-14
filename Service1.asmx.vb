@@ -259,7 +259,7 @@ Public Class Service1
     <WebMethod()> _
     Public Function validaFinger(ByVal codUsuario As String, ByVal template As Byte(), ByVal codDedo As Integer, ByVal cartaoFormatado As String, ByVal codPrestador As String) As String
         Try
-            Registro.Misc.StringToFile("Entrou na rotina de valida finger.", "D:\inetpub\wwwroot\wsidentifyfinger\teste.txt")
+            'Registro.Misc.StringToFile("Entrou na rotina de valida finger.", "D:\inetpub\wwwroot\wsidentifyfinger\teste.txt")
             SqlConnection1.ConnectionString = Misc.GetDadoWebConfig("conexaoBiometria")
 
             cartaoFormatado = Misc.AjustaCartao(codUsuario, Registro.Misc.GetDadoWebConfig("AjusteCartao"), False)

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<xs:schema id="dsDadosUsuario" targetNamespace="http://tempuri.org/dsDadosUsuario.xsd" elementFormDefault="qualified"
+	attributeFormDefault="qualified" xmlns="http://tempuri.org/dsDadosUsuario.xsd" xmlns:mstns="http://tempuri.org/dsDadosUsuario.xsd"
+	xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+	<xs:element name="dsDadosUsuario" msdata:IsDataSet="true">
+		<xs:complexType>
+			<xs:choice maxOccurs="unbounded">
+				<xs:element name="DadosUsuario">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="Nome" type="xs:string" />
+							<xs:element name="DataNasc" type="xs:date" />
+							<xs:element name="Sexo" type="xs:string" />
+							<xs:element name="NomeMae" type="xs:string" />
+							<xs:element name="CPF" type="xs:string" />
+							<xs:element name="RG" type="xs:string" />
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+			</xs:choice>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>
