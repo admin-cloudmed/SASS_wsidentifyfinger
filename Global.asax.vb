@@ -1,7 +1,7 @@
 Imports System.Web
 Imports System.Web.SessionState
 
-Public Class Global
+Public Class [Global]
     Inherits System.Web.HttpApplication
 
 #Region " Component Designer Generated Code "
