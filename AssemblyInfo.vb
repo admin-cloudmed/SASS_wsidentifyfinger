@@ -12,7 +12,7 @@ Imports System.Runtime.InteropServices
 <Assembly: AssemblyDescription("Web Service de Integracao entre a página de captura da digital e o SASS")> 
 <Assembly: AssemblyCompany("Plano Be")> 
 <Assembly: AssemblyProduct("")> 
-<Assembly: AssemblyCopyright("(C) Copyright 2008 Plano Be")> 
+<Assembly: AssemblyCopyright("(C) Copyright 2012 Plano Be")> 
 <Assembly: AssemblyTrademark("")> 
 <Assembly: CLSCompliant(True)> 
 
@@ -29,4 +29,4 @@ Imports System.Runtime.InteropServices
 ' You can specify all the values or you can default the Build and Revision Numbers 
 ' by using the '*' as shown below:
 
-<Assembly: AssemblyVersion("1.7.5")> 
+<Assembly: AssemblyVersion("2.0.0")> 
