@@ -180,7 +180,9 @@
       <Generator>MSDiscoCodeGenerator</Generator>
       <LastGenOutput>Reference.vb</LastGenOutput>
     </None>
-    <Content Include="Web.config" />
+    <Content Include="Web.config">
+      <SubType>Designer</SubType>
+    </Content>
     <WebReferences Include="Web References\" />
     <WebReferenceUrl Include="http://192.168.0.130/sassautorizadorweb/autorizador.asmx">
       <RelPath>Web References\WebReference\</RelPath>
